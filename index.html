@@ -1,50 +1,212 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meine Webseite</title>
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f4f8;
-            text-align: center;
-            padding: 50px;
-        }
-
-        h1 {
-            color: #2563eb;
-        }
-
-        p {
-            font-size: 18px;
-            color: #333;
-        }
-
-        button {
-            background-color: #2563eb;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #1d4ed8;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>日本語 – Japanisch Vokabeltrainer</title>
+  <style>
+    :root {
+      --ink: #242338; --muted: #77758a; --paper: #fffdf9;
+      --accent: #d94f70; --accent-dark: #b93657; --line: #eee7e5;
+      --green: #25845d; --red: #c33e4e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; color: var(--ink);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% 8%, #fbe2e8 0, transparent 28%),
+        radial-gradient(circle at 90% 90%, #e8e8fa 0, transparent 30%), #f8f6f3;
+      display: grid; place-items: center; padding: 24px;
+    }
+    .app { width: min(100%, 600px); }
+    header { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .logo { width:46px; height:46px; border-radius:15px; background:var(--accent); color:white; display:grid; place-items:center; font-size:25px; }
+    h1 { margin:0; font-size:19px; letter-spacing:-.4px; }
+    .subtitle { color:var(--muted); font-size:12px; margin-top:2px; }
+    .tag { font-size:12px; font-weight:700; color:var(--accent-dark); background:#fce8ed; padding:7px 11px; border-radius:20px; }
+    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+    .stat { background:rgba(255,255,255,.8); border:1px solid var(--line); border-radius:15px; padding:12px; text-align:center; }
+    .stat strong { display:block; font-size:21px; }
+    .stat span { color:var(--muted); font-size:11px; }
+    .card { background:var(--paper); border:1px solid var(--line); border-radius:24px; padding:clamp(22px,5vw,36px); box-shadow:0 18px 60px #42304b12; }
+    .progress-head { display:flex; justify-content:space-between; color:var(--muted); font-size:12px; margin-bottom:8px; }
+    .progress { height:6px; background:#f0e9e8; border-radius:20px; overflow:hidden; margin-bottom:28px; }
+    .bar { height:100%; width:0; background:var(--accent); border-radius:20px; transition:width .25s; }
+    .prompt-label { text-align:center; color:var(--muted); font-size:13px; }
+    .word { text-align:center; font-size:clamp(36px,9vw,54px); font-weight:750; letter-spacing:-1.5px; margin:10px 0 6px; }
+    .hint { text-align:center; color:var(--muted); font-size:13px; margin-bottom:25px; }
+    input { width:100%; border:1.5px solid #e8dfe0; border-radius:13px; padding:15px 16px; font-size:18px; outline:none; background:white; color:var(--ink); text-align:center; }
+    input:focus { border-color:var(--accent); box-shadow:0 0 0 3px #d94f7015; }
+    input:disabled { background:#faf7f6; }
+    .feedback { display:none; margin-top:12px; padding:13px; border-radius:12px; text-align:center; font-size:14px; }
+    .feedback.good { display:block; background:#eaf6ef; color:var(--green); }
+    .feedback.bad { display:block; background:#fff0f0; color:var(--red); }
+    .feedback small { display:block; margin-top:4px; color:inherit; opacity:.85; }
+    button { border:0; border-radius:13px; padding:14px 18px; font:inherit; font-weight:700; cursor:pointer; transition:transform .12s, background .12s; }
+    button:active { transform:scale(.98); }
+    .primary { width:100%; margin-top:14px; background:var(--accent); color:white; }
+    .primary:hover { background:var(--accent-dark); }
+    .secondary { background:#f3eff1; color:var(--ink); }
+    .controls { display:flex; justify-content:space-between; gap:10px; margin-top:12px; }
+    .controls button { flex:1; font-size:13px; }
+    .foot { text-align:center; color:var(--muted); font-size:12px; margin-top:18px; }
+    .finished { text-align:center; padding:14px 0; }
+    .finished .emoji { font-size:48px; }
+    .finished h2 { margin:10px 0; }
+    @media (max-width:420px) { header { align-items:flex-start; } .tag { margin-top:5px; } .controls button { padding:12px 8px; } }
+  </style>
 </head>
-
 <body>
-    <h1>Willkommen auf meiner Webseite!</h1>
+  <main class="app">
+    <header>
+      <div class="brand">
+        <div class="logo">あ</div>
+        <div>
+          <h1>Japanisch Vokabeltrainer</h1>
+          <div class="subtitle">Lerne Schritt für Schritt 日本語</div>
+        </div>
+      </div>
+      <div class="tag">JLPT N5</div>
+    </header>
 
-    <p>Das ist meine erste Webseite mit GitHub Pages.</p>
+    <section class="stats" aria-label="Lernstatistik">
+      <div class="stat"><strong id="score">0</strong><span>Richtig</span></div>
+      <div class="stat"><strong id="streak">0</strong><span>Serie 🔥</span></div>
+      <div class="stat"><strong id="remaining">20</strong><span>Übrig</span></div>
+    </section>
 
-    <button onclick="alert('Hallo!')">
-        Klick mich!
-    </button>
+    <section class="card" id="quiz">
+      <div class="progress-head"><span id="questionCount">Frage 1 von 20</span><span id="percent">0 %</span></div>
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="prompt-label">Wie heißt dieses Wort auf Japanisch?</div>
+      <div class="word" id="german">Hund</div>
+      <div class="hint">Du kannst Hiragana, Kanji oder Romaji eingeben (wenn angegeben).</div>
+      <form id="answerForm">
+        <input id="answer" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Japanische Antwort …" aria-label="Japanische Antwort" />
+        <div class="feedback" id="feedback" role="status"></div>
+        <button class="primary" id="submit" type="submit">Antwort überprüfen</button>
+      </form>
+    </section>
+
+    <div class="controls">
+      <button class="secondary" id="skip">Überspringen ↷</button>
+      <button class="secondary" id="restart">Neu starten ⟳</button>
+    </div>
+    <div class="foot">小さな一歩 · Jeder kleine Schritt zählt</div>
+  </main>
+
+<script>
+  // Vokabeln: deutsche Bedeutung, akzeptierte japanische Antworten und Lesung
+  const vocabulary = [
+    {de:"Hund", answers:["いぬ","犬","inu"], reading:"いぬ"},
+    {de:"Katze", answers:["ねこ","猫","neko"], reading:"ねこ"},
+    {de:"Wasser", answers:["みず","水","mizu"], reading:"みず"},
+    {de:"Buch", answers:["ほん","本","hon"], reading:"ほん"},
+    {de:"Mensch", answers:["ひと","人","hito"], reading:"ひと"},
+    {de:"Haus", answers:["いえ","家","ie"], reading:"いえ"},
+    {de:"Schule", answers:["がっこう","学校","gakkou","gakko"], reading:"がっこう"},
+    {de:"Freund", answers:["ともだち","友達","tomodachi"], reading:"ともだち"},
+    {de:"Apfel", answers:["りんご","林檎","ringo"], reading:"りんご"},
+    {de:"Berg", answers:["やま","山","yama"], reading:"やま"},
+    {de:"Sonne / Tag", answers:["ひ","日","hi"], reading:"ひ"},
+    {de:"Mond", answers:["つき","月","tsuki"], reading:"つき"},
+    {de:"Auto", answers:["くるま","車","kuruma"], reading:"くるま"},
+    {de:"Essen", answers:["たべもの","食べ物","tabemono"], reading:"たべもの"},
+    {de:"Trinken", answers:["のみもの","飲み物","nomimono"], reading:"のみもの"},
+    {de:"Morgen", answers:["あさ","朝","asa"], reading:"あさ"},
+    {de:"Abend", answers:["よる","夜","yoru"], reading:"よる"},
+    {de:"Danke", answers:["ありがとう","arigatou","arigato"], reading:"ありがとう"},
+    {de:"Hallo (tagsüber)", answers:["こんにちは","konnichiwa"], reading:"こんにちは"},
+    {de:"Auf Wiedersehen", answers:["さようなら","さよなら","sayounara","sayonara"], reading:"さようなら"},
+    {de:"Groß", answers:["おおきい","大きい","大きな","ookii"], reading:"おおきい"},
+    {de:"Klein", answers:["ちいさい","小さい","chiisai"], reading:"ちいさい"},
+    {de:"Ja", answers:["はい","hai"], reading:"はい"},
+    {de:"Nein", answers:["いいえ","iie"], reading:"いいえ"},
+    {de:"Lehrer", answers:["せんせい","先生","sensei"], reading:"せんせい"},
+    {de:"Zeit", answers:["じかん","時間","jikan"], reading:"じかん"},
+    {de:"Heute", answers:["きょう","今日","kyou","kyo"], reading:"きょう"},
+    {de:"Morgen (nächster Tag)", answers:["あした","明日","ashita"], reading:"あした"},
+    {de:"Kind", answers:["こども","子供","子ども","kodomo"], reading:"こども"},
+    {de:"Liebe", answers:["あい","愛","ai"], reading:"あい"}
+  ];
+
+  const $ = id => document.getElementById(id);
+  let deck = [], index = 0, score = 0, streak = 0, answered = false;
+
+  function shuffle(items) {
+    const copy = [...items];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+  function normalize(text) {
+    return text.trim().toLowerCase().replace(/\s+/g, "");
+  }
+  function start() {
+    deck = shuffle(vocabulary).slice(0, 20);
+    index = 0; score = 0; streak = 0; answered = false;
+    updateStats(); render();
+  }
+  function updateStats() {
+    $("score").textContent = score;
+    $("streak").textContent = streak;
+    $("remaining").textContent = Math.max(0, deck.length - index);
+    const pct = deck.length ? Math.round(index / deck.length * 100) : 0;
+    $("bar").style.width = pct + "%";
+    $("percent").textContent = pct + " %";
+    $("questionCount").textContent = index < deck.length ? `Frage ${index + 1} von ${deck.length}` : "Geschafft!";
+  }
+  function render() {
+    if (index >= deck.length) {
+      $("quiz").innerHTML = `<div class="finished"><div class="emoji">🎉</div><h2>Gut gemacht!</h2><p>Du hast ${score} von ${deck.length} Vokabeln richtig beantwortet.</p><p>Deine Trefferquote: ${Math.round(score / deck.length * 100)} %</p><button class="primary" onclick="start()">Noch eine Runde</button></div>`;
+      updateStats(); return;
+    }
+    const item = deck[index];
+    $("german").textContent = item.de;
+    $("answer").value = "";
+    $("answer").disabled = false;
+    $("answer").focus();
+    $("feedback").className = "feedback";
+    $("feedback").textContent = "";
+    $("submit").textContent = "Antwort überprüfen";
+    answered = false;
+    updateStats();
+  }
+  $("answerForm").addEventListener("submit", event => {
+    event.preventDefault();
+    if (index >= deck.length) return;
+    if (answered) { index++; render(); return; }
+    const typed = normalize($("answer").value);
+    if (!typed) return;
+    const item = deck[index];
+    const correct = item.answers.some(answer => normalize(answer) === typed);
+    const feedback = $("feedback");
+    if (correct) {
+      score++; streak++;
+      feedback.className = "feedback good";
+      feedback.innerHTML = `Richtig! 🎉<small>${item.answers[0]} · Lesung: ${item.reading}</small>`;
+    } else {
+      streak = 0;
+      feedback.className = "feedback bad";
+      feedback.innerHTML = `Noch nicht ganz. Lösung: ${item.answers[0]}<small>Lesung: ${item.reading}</small>`;
+    }
+    $("score").textContent = score;
+    $("streak").textContent = streak;
+    $("answer").disabled = true;
+    $("submit").textContent = "Weiter zur nächsten Vokabel →";
+    answered = true;
+  });
+  $("skip").addEventListener("click", () => {
+    if (index >= deck.length) return;
+    if (!answered) streak = 0;
+    index++; render();
+  });
+  $("restart").addEventListener("click", start);
+  start();
+</script>
 </body>
 </html>
