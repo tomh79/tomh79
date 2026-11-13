@@ -37,6 +37,10 @@
     .prompt-label { text-align:center; color:var(--muted); font-size:13px; }
     .word { text-align:center; font-size:clamp(36px,9vw,54px); font-weight:750; letter-spacing:-1.5px; margin:10px 0 6px; }
     .hint { text-align:center; color:var(--muted); font-size:13px; margin-bottom:25px; }
+    .script-mode { text-align:center; margin-bottom:15px; }
+    .script-toggle { display:inline-flex; background:#f3eff1; border-radius:10px; padding:3px; gap:3px; }
+    .script-toggle button { background:transparent; border:0; padding:6px 14px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; transition:all .2s; color:var(--muted); }
+    .script-toggle button.active { background:white; color:var(--accent); box-shadow:0 2px 4px rgba(0,0,0,.08); }
     .input-wrapper { position: relative; }
     input { width:100%; border:1.5px solid #e8dfe0; border-radius:13px; padding:15px 16px; font-size:18px; outline:none; background:white; color:var(--ink); text-align:center; }
     input:focus { border-color:var(--accent); box-shadow:0 0 0 3px #d94f7015; }
@@ -94,7 +98,13 @@
       <div class="progress"><div class="bar" id="bar"></div></div>
       <div class="prompt-label">Wie heißt dieses Wort auf Japanisch?</div>
       <div class="word" id="german">Hund</div>
-      <div class="hint">Tippe in Romaji – es wird automatisch in Hiragana/Katakana umgewandelt.</div>
+      <div class="hint">Tippe in Romaji – es wird automatisch umgewandelt.</div>
+      <div class="script-mode">
+        <div class="script-toggle">
+          <button id="btnHiragana" class="active">あ Hiragana</button>
+          <button id="btnKatakana">ア Katakana</button>
+        </div>
+      </div>
       <form id="answerForm">
         <div class="input-wrapper">
           <div class="romaji-preview" id="romajiPreview"></div>
@@ -108,118 +118,117 @@
       <button class="secondary" id="skip">Überspringen ↷</button>
       <button class="secondary" id="restart">Neu starten ⟳</button>
     </div>
-
+  
   </main>
 
 <script>
   // Komplettes N5-Vokabular (100 wichtigste Wörter)
   const vocabulary = [
-    {de:"Ich", answers:["わたし","私","watashi"], reading:"わたし"},
-    {de:"Du / Sie", answers:["あなた","anata"], reading:"あなた"},
-    {de:"Er / Sie / Es", answers:["かれ","彼","kare"], reading:"かれ"},
-    {de:"Sie (weiblich)", answers:["かのじょ","彼女","kanojo"], reading:"かのじょ"},
-    {de:"Wir", answers:["わたしたち","私たち","watashitachi"], reading:"わたしたち"},
-    {de:"Mensch", answers:["ひと","人","hito"], reading:"ひと"},
-    {de:"Kind", answers:["こども","子供","子ども","kodomo"], reading:"こども"},
-    {de:"Mann", answers:["おとこ","男","otoko"], reading:"おとこ"},
-    {de:"Frau", answers:["おんな","女","onna"], reading:"おんな"},
-    {de:"Lehrer", answers:["せんせい","先生","sensei"], reading:"せんせい"},
-    {de:"Schüler", answers:["がくせい","学生","gakusei"], reading:"がくせい"},
-    {de:"Freund", answers:["ともだち","友達","tomodachi"], reading:"ともだち"},
-    {de:"Familie", answers:["かぞく","家族","kazoku"], reading:"かぞく"},
-    {de:"Mutter", answers:["はは","母","haha"], reading:"はは"},
-    {de:"Vater", answers:["ちち","父","chichi"], reading:"ちち"},
-    {de:"Älterer Bruder", answers:["あに","兄","ani"], reading:"あに"},
-    {de:"Ältere Schwester", answers:["あね","姉","ane"], reading:"あね"},
-    {de:"Jüngerer Bruder", answers:["おとうと","弟","otouto"], reading:"おとうと"},
-    {de:"Jüngere Schwester", answers:["いもうと","妹","imouto"], reading:"いもうと"},
-    {de:"Hund", answers:["いぬ","犬","inu"], reading:"いぬ"},
-    {de:"Katze", answers:["ねこ","猫","neko"], reading:"ねこ"},
-    {de:"Vogel", answers:["とり","鳥","tori"], reading:"とり"},
-    {de:"Fisch", answers:["さかな","魚","sakana"], reading:"さかな"},
-    {de:"Haus", answers:["いえ","家","ie"], reading:"いえ"},
-    {de:"Schule", answers:["がっこう","学校","gakkou","gakko"], reading:"がっこう"},
-    {de:"Firma", answers:["かいしゃ","会社","kaisha"], reading:"かいしゃ"},
-    {de:"Krankenhaus", answers:["びょういん","病院","byouin"], reading:"びょういん"},
-    {de:"Bahnhof", answers:["えき","駅","eki"], reading:"えき"},
-    {de:"Geschäft", answers:["みせ","店","mise"], reading:"みせ"},
-    {de:"Restaurant", answers:["レストラン","resutoran"], reading:"レストラン"},
-    {de:"Bank", answers:["ぎんこう","銀行","ginkou","ginko"], reading:"ぎんこう"},
-    {de:"Post", answers:["ゆうびんきょく","郵便局","yuubinkyoku"], reading:"ゆうびんきょく"},
-    {de:"Buch", answers:["ほん","本","hon"], reading:"ほん"},
-    {de:"Zeitung", answers:["しんぶん","新聞","shinbun"], reading:"しんぶん"},
-    {de:"Stift", answers:["ペン","pen"], reading:"ペン"},
-    {de:"Papier", answers:["かみ","紙","kami"], reading:"かみ"},
-    {de:"Tisch", answers:["つくえ","机","tsukue"], reading:"つくえ"},
-    {de:"Stuhl", answers:["いす","椅子","isu"], reading:"いす"},
-    {de:"Tür", answers:["ドア","doa"], reading:"ドア"},
-    {de:"Fenster", answers:["まど","窓","mado"], reading:"まど"},
-    {de:"Auto", answers:["くるま","車","kuruma"], reading:"くるま"},
-    {de:"Zug", answers:["でんしゃ","電車","densha"], reading:"でんしゃ"},
-    {de:"Bus", answers:["バス","basu"], reading:"バス"},
-    {de:"Flugzeug", answers:["ひこうき","飛行機","hikouki"], reading:"ひこうき"},
-    {de:"Fahrrad", answers:["じてんしゃ","自転車","jitensha"], reading:"じてんしゃ"},
-    {de:"Wasser", answers:["みず","水","mizu"], reading:"みず"},
-    {de:"Tee", answers:["おちゃ","お茶","ocha"], reading:"おちゃ"},
-    {de:"Kaffee", answers:["コーヒー","koohii"], reading:"コーヒー"},
-    {de:"Milch", answers:["ぎゅうにゅう","牛乳","gyuunyuu"], reading:"ぎゅうにゅう"},
-    {de:"Reis (gekocht)", answers:["ごはん","ご飯","gohan"], reading:"ごはん"},
-    {de:"Brot", answers:["パン","pan"], reading:"パン"},
-    {de:"Fleisch", answers:["にく","肉","niku"], reading:"にく"},
-    {de:"Gemüse", answers:["やさい","野菜","yasai"], reading:"やさい"},
-    {de:"Obst", answers:["くだもの","果物","kudamono"], reading:"くだもの"},
-    {de:"Apfel", answers:["りんご","林檎","ringo"], reading:"りんご"},
-    {de:"Ei", answers:["たまご","卵","tamago"], reading:"たまご"},
-    {de:"Essen", answers:["たべもの","食べ物","tabemono"], reading:"たべもの"},
-    {de:"Trinken", answers:["のみもの","飲み物","nomimono"], reading:"のみもの"},
-    {de:"Morgen", answers:["あさ","朝","asa"], reading:"あさ"},
-    {de:"Mittag", answers:["ひる","昼","hiru"], reading:"ひる"},
-    {de:"Abend", answers:["よる","夜","yoru"], reading:"よる"},
-    {de:"Heute", answers:["きょう","今日","kyou","kyo"], reading:"きょう"},
-    {de:"Gestern", answers:["きのう","昨日","kinou"], reading:"きのう"},
-    {de:"Morgen (nächster Tag)", answers:["あした","明日","ashita"], reading:"あした"},
-    {de:"Jahr", answers:["とし","年","toshi"], reading:"とし"},
-    {de:"Monat", answers:["つき","月","tsuki"], reading:"つき"},
-    {de:"Tag", answers:["ひ","日","hi"], reading:"ひ"},
-    {de:"Woche", answers:["しゅう","週","shuu"], reading:"しゅう"},
-    {de:"Zeit", answers:["じかん","時間","jikan"], reading:"じかん"},
-    {de:"Berg", answers:["やま","山","yama"], reading:"やま"},
-    {de:"Fluss", answers:["かわ","川","kawa"], reading:"かわ"},
-    {de:"Meer", answers:["うみ","海","umi"], reading:"うみ"},
-    {de:"Himmel", answers:["そら","空","sora"], reading:"そら"},
-    {de:"Sonne / Tag", answers:["ひ","日","hi"], reading:"ひ"},
-    {de:"Mond", answers:["つき","月","tsuki"], reading:"つき"},
-    {de:"Stern", answers:["ほし","星","hoshi"], reading:"ほし"},
-    {de:"Regen", answers:["あめ","雨","ame"], reading:"あめ"},
-    {de:"Schnee", answers:["ゆき","雪","yuki"], reading:"ゆき"},
-    {de:"Wind", answers:["かぜ","風","kaze"], reading:"かぜ"},
-    {de:"Baum", answers:["き","木","ki"], reading:"き"},
-    {de:"Blume", answers:["はな","花","hana"], reading:"はな"},
-    {de:"Gras", answers:["くさ","草","kusa"], reading:"くさ"},
-    {de:"Groß", answers:["おおきい","大きい","ookii"], reading:"おおきい"},
-    {de:"Klein", answers:["ちいさい","小さい","chiisai"], reading:"ちいさい"},
-    {de:"Neu", answers:["あたらしい","新しい","atarashii"], reading:"あたらしい"},
-    {de:"Alt", answers:["ふるい","古い","furui"], reading:"ふるい"},
-    {de:"Gut", answers:["いい","よい","良い","ii","yoi"], reading:"いい"},
-    {de:"Schlecht", answers:["わるい","悪い","warui"], reading:"わるい"},
-    {de:"Schön", answers:["きれい","綺麗","kirei"], reading:"きれい"},
-    {de:"Heiß", answers:["あつい","暑い","熱い","atsui"], reading:"あつい"},
-    {de:"Kalt", answers:["さむい","寒い","samui"], reading:"さむい"},
-    {de:"Liebe", answers:["あい","愛","ai"], reading:"あい"},
-    {de:"Ja", answers:["はい","hai"], reading:"はい"},
-    {de:"Nein", answers:["いいえ","iie"], reading:"いいえ"},
-    {de:"Danke", answers:["ありがとう","arigatou","arigato"], reading:"ありがとう"},
-    {de:"Entschuldigung", answers:["すみません","sumimasen"], reading:"すみません"},
-    {de:"Hallo (tagsüber)", answers:["こんにちは","konnichiwa"], reading:"こんにちは"},
-    {de:"Guten Morgen", answers:["おはよう","ohayou","ohayo"], reading:"おはよう"},
-    {de:"Guten Abend", answers:["こんばんは","konbanwa"], reading:"こんばんは"},
-    {de:"Auf Wiedersehen", answers:["さようなら","さよなら","sayounara","sayonara"], reading:"さようなら"},
-    {de:"Gute Nacht", answers:["おやすみ","oyasumi"], reading:"おやすみ"}
+    {de:"Ich", answers:["わたし","私","watashi"], reading:"わたし", type:"hiragana"},
+    {de:"Du / Sie", answers:["あなた","anata"], reading:"あなた", type:"hiragana"},
+    {de:"Er / Sie / Es", answers:["かれ","彼","kare"], reading:"かれ", type:"hiragana"},
+    {de:"Sie (weiblich)", answers:["かのじょ","彼女","kanojo"], reading:"かのじょ", type:"hiragana"},
+    {de:"Wir", answers:["わたしたち","私たち","watashitachi"], reading:"わたしたち", type:"hiragana"},
+    {de:"Mensch", answers:["ひと","人","hito"], reading:"ひと", type:"hiragana"},
+    {de:"Kind", answers:["こども","子供","子ども","kodomo"], reading:"こども", type:"hiragana"},
+    {de:"Mann", answers:["おとこ","男","otoko"], reading:"おとこ", type:"hiragana"},
+    {de:"Frau", answers:["おんな","女","onna"], reading:"おんな", type:"hiragana"},
+    {de:"Lehrer", answers:["せんせい","先生","sensei"], reading:"せんせい", type:"hiragana"},
+    {de:"Schüler", answers:["がくせい","学生","gakusei"], reading:"がくせい", type:"hiragana"},
+    {de:"Freund", answers:["ともだち","友達","tomodachi"], reading:"ともだち", type:"hiragana"},
+    {de:"Familie", answers:["かぞく","家族","kazoku"], reading:"かぞく", type:"hiragana"},
+    {de:"Mutter", answers:["はは","母","haha"], reading:"はは", type:"hiragana"},
+    {de:"Vater", answers:["ちち","父","chichi"], reading:"ちち", type:"hiragana"},
+    {de:"Älterer Bruder", answers:["あに","兄","ani"], reading:"あに", type:"hiragana"},
+    {de:"Ältere Schwester", answers:["あね","姉","ane"], reading:"あね", type:"hiragana"},
+    {de:"Jüngerer Bruder", answers:["おとうと","弟","otouto"], reading:"おとうと", type:"hiragana"},
+    {de:"Jüngere Schwester", answers:["いもうと","妹","imouto"], reading:"いもうと", type:"hiragana"},
+    {de:"Hund", answers:["いぬ","犬","inu"], reading:"いぬ", type:"hiragana"},
+    {de:"Katze", answers:["ねこ","猫","neko"], reading:"ねこ", type:"hiragana"},
+    {de:"Vogel", answers:["とり","鳥","tori"], reading:"とり", type:"hiragana"},
+    {de:"Fisch", answers:["さかな","魚","sakana"], reading:"さかな", type:"hiragana"},
+    {de:"Haus", answers:["いえ","家","ie"], reading:"いえ", type:"hiragana"},
+    {de:"Schule", answers:["がっこう","学校","gakkou","gakko"], reading:"がっこう", type:"hiragana"},
+    {de:"Firma", answers:["かいしゃ","会社","kaisha"], reading:"かいしゃ", type:"hiragana"},
+    {de:"Krankenhaus", answers:["びょういん","病院","byouin"], reading:"びょういん", type:"hiragana"},
+    {de:"Bahnhof", answers:["えき","駅","eki"], reading:"えき", type:"hiragana"},
+    {de:"Geschäft", answers:["みせ","店","mise"], reading:"みせ", type:"hiragana"},
+    {de:"Restaurant", answers:["レストラン","resutoran"], reading:"レストラン", type:"katakana"},
+    {de:"Bank", answers:["ぎんこう","銀行","ginkou","ginko"], reading:"ぎんこう", type:"hiragana"},
+    {de:"Post", answers:["ゆうびんきょく","郵便局","yuubinkyoku"], reading:"ゆうびんきょく", type:"hiragana"},
+    {de:"Buch", answers:["ほん","本","hon"], reading:"ほん", type:"hiragana"},
+    {de:"Zeitung", answers:["しんぶん","新聞","shinbun"], reading:"しんぶん", type:"hiragana"},
+    {de:"Stift", answers:["ペン","pen"], reading:"ペン", type:"katakana"},
+    {de:"Papier", answers:["かみ","紙","kami"], reading:"かみ", type:"hiragana"},
+    {de:"Tisch", answers:["つくえ","机","tsukue"], reading:"つくえ", type:"hiragana"},
+    {de:"Stuhl", answers:["いす","椅子","isu"], reading:"いす", type:"hiragana"},
+    {de:"Tür", answers:["ドア","doa"], reading:"ドア", type:"katakana"},
+    {de:"Fenster", answers:["まど","窓","mado"], reading:"まど", type:"hiragana"},
+    {de:"Auto", answers:["くるま","車","kuruma"], reading:"くるま", type:"hiragana"},
+    {de:"Zug", answers:["でんしゃ","電車","densha"], reading:"でんしゃ", type:"hiragana"},
+    {de:"Bus", answers:["バス","basu"], reading:"バス", type:"katakana"},
+    {de:"Flugzeug", answers:["ひこうき","飛行機","hikouki"], reading:"ひこうき", type:"hiragana"},
+    {de:"Fahrrad", answers:["じてんしゃ","自転車","jitensha"], reading:"じてんしゃ", type:"hiragana"},
+    {de:"Wasser", answers:["みず","水","mizu"], reading:"みず", type:"hiragana"},
+    {de:"Tee", answers:["おちゃ","お茶","ocha"], reading:"おちゃ", type:"hiragana"},
+    {de:"Kaffee", answers:["コーヒー","koohii"], reading:"コーヒー", type:"katakana"},
+    {de:"Milch", answers:["ぎゅうにゅう","牛乳","gyuunyuu"], reading:"ぎゅうにゅう", type:"hiragana"},
+    {de:"Reis (gekocht)", answers:["ごはん","ご飯","gohan"], reading:"ごはん", type:"hiragana"},
+    {de:"Brot", answers:["パン","pan"], reading:"パン", type:"katakana"},
+    {de:"Fleisch", answers:["にく","肉","niku"], reading:"にく", type:"hiragana"},
+    {de:"Gemüse", answers:["やさい","野菜","yasai"], reading:"やさい", type:"hiragana"},
+    {de:"Obst", answers:["くだもの","果物","kudamono"], reading:"くだもの", type:"hiragana"},
+    {de:"Apfel", answers:["りんご","林檎","ringo"], reading:"りんご", type:"hiragana"},
+    {de:"Ei", answers:["たまご","卵","tamago"], reading:"たまご", type:"hiragana"},
+    {de:"Essen", answers:["たべもの","食べ物","tabemono"], reading:"たべもの", type:"hiragana"},
+    {de:"Trinken", answers:["のみもの","飲み物","nomimono"], reading:"のみもの", type:"hiragana"},
+    {de:"Morgen", answers:["あさ","朝","asa"], reading:"あさ", type:"hiragana"},
+    {de:"Mittag", answers:["ひる","昼","hiru"], reading:"ひる", type:"hiragana"},
+    {de:"Abend", answers:["よる","夜","yoru"], reading:"よる", type:"hiragana"},
+    {de:"Heute", answers:["きょう","今日","kyou","kyo"], reading:"きょう", type:"hiragana"},
+    {de:"Gestern", answers:["きのう","昨日","kinou"], reading:"きのう", type:"hiragana"},
+    {de:"Morgen (nächster Tag)", answers:["あした","明日","ashita"], reading:"あした", type:"hiragana"},
+    {de:"Jahr", answers:["とし","年","toshi"], reading:"とし", type:"hiragana"},
+    {de:"Monat", answers:["つき","月","tsuki"], reading:"つき", type:"hiragana"},
+    {de:"Tag", answers:["ひ","日","hi"], reading:"ひ", type:"hiragana"},
+    {de:"Woche", answers:["しゅう","週","shuu"], reading:"しゅう", type:"hiragana"},
+    {de:"Zeit", answers:["じかん","時間","jikan"], reading:"じかん", type:"hiragana"},
+    {de:"Berg", answers:["やま","山","yama"], reading:"やま", type:"hiragana"},
+    {de:"Fluss", answers:["かわ","川","kawa"], reading:"かわ", type:"hiragana"},
+    {de:"Meer", answers:["うみ","海","umi"], reading:"うみ", type:"hiragana"},
+    {de:"Himmel", answers:["そら","空","sora"], reading:"そら", type:"hiragana"},
+    {de:"Sonne / Tag", answers:["ひ","日","hi"], reading:"ひ", type:"hiragana"},
+    {de:"Mond", answers:["つき","月","tsuki"], reading:"つき", type:"hiragana"},
+    {de:"Stern", answers:["ほし","星","hoshi"], reading:"ほし", type:"hiragana"},
+    {de:"Regen", answers:["あめ","雨","ame"], reading:"あめ", type:"hiragana"},
+    {de:"Schnee", answers:["ゆき","雪","yuki"], reading:"ゆき", type:"hiragana"},
+    {de:"Wind", answers:["かぜ","風","kaze"], reading:"かぜ", type:"hiragana"},
+    {de:"Baum", answers:["き","木","ki"], reading:"き", type:"hiragana"},
+    {de:"Blume", answers:["はな","花","hana"], reading:"はな", type:"hiragana"},
+    {de:"Gras", answers:["くさ","草","kusa"], reading:"くさ", type:"hiragana"},
+    {de:"Groß", answers:["おおきい","大きい","ookii"], reading:"おおきい", type:"hiragana"},
+    {de:"Klein", answers:["ちいさい","小さい","chiisai"], reading:"ちいさい", type:"hiragana"},
+    {de:"Neu", answers:["あたらしい","新しい","atarashii"], reading:"あたらしい", type:"hiragana"},
+    {de:"Alt", answers:["ふるい","古い","furui"], reading:"ふるい", type:"hiragana"},
+    {de:"Gut", answers:["いい","よい","良い","ii","yoi"], reading:"いい", type:"hiragana"},
+    {de:"Schlecht", answers:["わるい","悪い","warui"], reading:"わるい", type:"hiragana"},
+    {de:"Schön", answers:["きれい","綺麗","kirei"], reading:"きれい", type:"hiragana"},
+    {de:"Heiß", answers:["あつい","暑い","熱い","atsui"], reading:"あつい", type:"hiragana"},
+    {de:"Kalt", answers:["さむい","寒い","samui"], reading:"さむい", type:"hiragana"},
+    {de:"Liebe", answers:["あい","愛","ai"], reading:"あい", type:"hiragana"},
+    {de:"Ja", answers:["はい","hai"], reading:"はい", type:"hiragana"},
+    {de:"Nein", answers:["いいえ","iie"], reading:"いいえ", type:"hiragana"},
+    {de:"Danke", answers:["ありがとう","arigatou","arigato"], reading:"ありがとう", type:"hiragana"},
+    {de:"Entschuldigung", answers:["すみません","sumimasen"], reading:"すみません", type:"hiragana"},
+    {de:"Hallo (tagsüber)", answers:["こんにちは","konnichiwa"], reading:"こんにちは", type:"hiragana"},
+    {de:"Guten Morgen", answers:["おはよう","ohayou","ohayo"], reading:"おはよう", type:"hiragana"},
+    {de:"Guten Abend", answers:["こんばんは","konbanwa"], reading:"こんばんは", type:"hiragana"},
+    {de:"Auf Wiedersehen", answers:["さようなら","さよなら","sayounara","sayonara"], reading:"さようなら", type:"hiragana"},
+    {de:"Gute Nacht", answers:["おやすみ","oyasumi"], reading:"おやすみ", type:"hiragana"}
   ];
 
-  // Verbesserte Romaji zu Hiragana/Katakana Konvertierung
-  const romajiMap = {
-    // Spezielle Kombinationen ZUERST (längste zuerst)
+  // Hiragana Map
+  const hiraganaMap = {
     'kya':'きゃ','kyu':'きゅ','kyo':'きょ',
     'gya':'ぎゃ','gyu':'ぎゅ','gyo':'ぎょ',
     'sha':'しゃ','shu':'しゅ','sho':'しょ','shi':'し',
@@ -232,17 +241,10 @@
     'rya':'りゃ','ryu':'りゅ','ryo':'りょ',
     'ja':'じゃ','ju':'じゅ','jo':'じょ',
     'tsu':'つ',
-    // Katakana Sonderfälle
-    'fa':'ファ','fi':'フィ','fe':'フェ','fo':'フォ',
-    'va':'ヴァ','vi':'ヴィ','vu':'ヴ','ve':'ヴェ','vo':'ヴォ',
-    'ti':'ティ','tu':'トゥ','di':'ディ','du':'ドゥ',
-    // Lange Vokale
-    'ou':'おう','oo':'おう','uu':'うう','ei':'えい','aa':'ああ','ii':'いい','ee':'ええ',
-    // Standard Hiragana (2 Zeichen)
     'ka':'か','ki':'き','ku':'く','ke':'け','ko':'こ',
     'ga':'が','gi':'ぎ','gu':'ぐ','ge':'げ','go':'ご',
     'sa':'さ','si':'し','su':'す','se':'せ','so':'そ',
-    'za':'ざ','zi':'じ','zu':'ず','ze':'ぜ','zo':'ぞ',
+    'za':'ざ','ji':'じ','zu':'ず','ze':'ぜ','zo':'ぞ',
     'ta':'た','ti':'ち','tu':'つ','te':'て','to':'と',
     'da':'だ','di':'ぢ','du':'づ','de':'で','do':'ど',
     'na':'な','ni':'に','nu':'ぬ','ne':'ね','no':'の',
@@ -253,12 +255,49 @@
     'ya':'や','yu':'ゆ','yo':'よ',
     'ra':'ら','ri':'り','ru':'る','re':'れ','ro':'ろ',
     'wa':'わ','wi':'ゐ','we':'ゑ','wo':'を',
-    // Einzelne Vokale (1 Zeichen) - ZULETZT
     'a':'あ','i':'い','u':'う','e':'え','o':'お',
     'n':'ん'
   };
 
-  function romajiToKana(romaji) {
+  // Katakana Map
+  const katakanaMap = {
+    'kya':'キャ','kyu':'キュ','kyo':'キョ',
+    'gya':'ギャ','gyu':'ギュ','gyo':'ギョ',
+    'sha':'シャ','shu':'シュ','sho':'ショ','shi':'シ',
+    'cha':'チャ','chu':'チュ','cho':'チョ','chi':'チ',
+    'nya':'ニャ','nyu':'ニュ','nyo':'ニョ',
+    'hya':'ヒャ','hyu':'ヒュ','hyo':'ヒョ',
+    'bya':'ビャ','byu':'ビュ','byo':'ビョ',
+    'pya':'ピャ','pyu':'ピュ','pyo':'ピョ',
+    'mya':'ミャ','myu':'ミュ','myo':'ミョ',
+    'rya':'リャ','ryu':'リュ','ryo':'リョ',
+    'ja':'ジャ','ju':'ジュ','jo':'ジョ',
+    'tsu':'ツ',
+    'fa':'ファ','fi':'フィ','fe':'フェ','fo':'フォ',
+    'va':'ヴァ','vi':'ヴィ','vu':'ヴ','ve':'ヴェ','vo':'ヴォ',
+    'ti':'ティ','tu':'トゥ','di':'ディ','du':'ドゥ',
+    'ka':'カ','ki':'キ','ku':'ク','ke':'ケ','ko':'コ',
+    'ga':'ガ','gi':'ギ','gu':'グ','ge':'ゲ','go':'ゴ',
+    'sa':'サ','si':'シ','su':'ス','se':'セ','so':'ソ',
+    'za':'ザ','ji':'ジ','zu':'ズ','ze':'ゼ','zo':'ゾ',
+    'ta':'タ','ti':'チ','tu':'ツ','te':'テ','to':'ト',
+    'da':'ダ','di':'ヂ','du':'ヅ','de':'デ','do':'ド',
+    'na':'ナ','ni':'ニ','nu':'ヌ','ne':'ネ','no':'ノ',
+    'ha':'ハ','hi':'ヒ','fu':'フ','he':'ヘ','ho':'ホ',
+    'ba':'バ','bi':'ビ','bu':'ブ','be':'ベ','bo':'ボ',
+    'pa':'パ','pi':'ピ','pu':'プ','pe':'ペ','po':'ポ',
+    'ma':'マ','mi':'ミ','mu':'ム','me':'メ','mo':'モ',
+    'ya':'ヤ','yu':'ユ','yo':'ヨ',
+    'ra':'ラ','ri':'リ','ru':'ル','re':'レ','ro':'ロ',
+    'wa':'ワ','wi':'ヰ','we':'ヱ','wo':'ヲ',
+    'a':'ア','i':'イ','u':'ウ','e':'エ','o':'オ',
+    'n':'ン'
+  };
+
+  function romajiToKana(romaji, useKatakana = false) {
+    const map = useKatakana ? katakanaMap : hiraganaMap;
+    const smallTsu = useKatakana ? 'ッ' : 'っ';
+    
     let result = '';
     let input = romaji.toLowerCase();
     let i = 0;
@@ -266,34 +305,33 @@
     while (i < input.length) {
       let matched = false;
       
-      // Versuche längste Übereinstimmung zuerst (4, 3, 2, dann 1 Zeichen)
-      for (let len = 4; len >= 1; len--) {
+      // Versuche längste Übereinstimmung zuerst
+      for (let len = 3; len >= 1; len--) {
         let substr = input.substr(i, len);
         
         // Spezialfall: 'n' nur konvertieren wenn danach kein Vokal oder y kommt
-        if (substr === 'n' && len === 1) {
+        if (substr === 'n' && len === 1 && i + 1 < input.length) {
           let nextChar = input[i + 1];
-          if (nextChar && 'aiueoy'.includes(nextChar)) {
-            // Nicht konvertieren, warte auf mehr Input
-            break;
+          if ('aiueoy'.includes(nextChar)) {
+            break; // Nicht konvertieren
           }
         }
         
-        if (romajiMap[substr]) {
-          result += romajiMap[substr];
+        if (map[substr]) {
+          result += map[substr];
           i += len;
           matched = true;
           break;
         }
       }
       
-      // Doppelkonsonanten (っ)
+      // Doppelkonsonanten (っ/ッ)
       if (!matched && i < input.length - 1) {
         let current = input[i];
         let next = input[i + 1];
         
         if (current === next && 'kgsztdhbpmyrw'.includes(current)) {
-          result += 'っ';
+          result += smallTsu;
           i++;
           matched = true;
         }
@@ -311,6 +349,7 @@
   const $ = id => document.getElementById(id);
   let deck = [], wrongAnswers = [], index = 0, score = 0, streak = 0, isRetryRound = false;
   let isRetryMode = false;
+  let currentScriptMode = 'hiragana'; // 'hiragana' oder 'katakana'
 
   function shuffle(items) {
     const copy = [...items];
@@ -355,6 +394,11 @@
     $("questionCount").textContent = index < deck.length ? `Frage ${index + 1} von ${deck.length}` : "Geschafft!";
   }
 
+  function updateScriptToggle() {
+    $("btnHiragana").classList.toggle("active", currentScriptMode === 'hiragana');
+    $("btnKatakana").classList.toggle("active", currentScriptMode === 'katakana');
+  }
+
   function render() {
     if (index >= deck.length) {
       const retryButton = wrongAnswers.length > 0 
@@ -374,11 +418,21 @@
     }
     
     const item = deck[index];
+    
+    // Automatisch auf Katakana umschalten wenn nötig
+    if (item.type === 'katakana') {
+      currentScriptMode = 'katakana';
+    } else {
+      currentScriptMode = 'hiragana';
+    }
+    
     $("german").textContent = item.de;
     $("answer").value = "";
     $("answer").disabled = false;
     $("answer").classList.remove("error");
     $("answer").focus();
+    
+    updateScriptToggle();
     
     const feedback = $("feedback");
     if (isRetryMode) {
@@ -386,11 +440,24 @@
       feedback.innerHTML = `<small>Versuche es nochmal! Schreibe:</small><span class="solution">${item.answers[0]}</span><small>Lesung: ${item.reading}</small>`;
     } else {
       feedback.className = "feedback neutral";
-      feedback.innerHTML = "Tippe die Antwort ein...";
+      feedback.innerHTML = `Tippe die Antwort in ${currentScriptMode === 'katakana' ? 'Katakana' : 'Hiragana'} ein...`;
     }
     
     updateStats();
   }
+
+  // Manuelle Umschaltung
+  $("btnHiragana").addEventListener("click", () => {
+    currentScriptMode = 'hiragana';
+    updateScriptToggle();
+    $("answer").focus();
+  });
+
+  $("btnKatakana").addEventListener("click", () => {
+    currentScriptMode = 'katakana';
+    updateScriptToggle();
+    $("answer").focus();
+  });
 
   // Live Romaji zu Kana Konvertierung
   $("answer").addEventListener("input", (e) => {
@@ -409,8 +476,9 @@
     }
     
     // Konvertiere zu Kana
-    const convertedBefore = romajiToKana(beforeCursor);
-    const convertedAfter = romajiToKana(afterCursor);
+    const useKatakana = currentScriptMode === 'katakana';
+    const convertedBefore = romajiToKana(beforeCursor, useKatakana);
+    const convertedAfter = romajiToKana(afterCursor, useKatakana);
     const newValue = convertedBefore + convertedAfter;
     
     if (newValue !== input.value) {
