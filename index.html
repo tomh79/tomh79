@@ -100,7 +100,7 @@
         <div class="logo">あ</div>
         <div>
           <h1>Japanisch Vokabeltrainer</h1>
-          
+       
           <div class="sync-status" id="syncStatus">
             <span id="syncIcon">💾</span>
             <span id="syncText">Lokal gespeichert</span>
@@ -122,9 +122,9 @@
     </section>
 
     <section class="settings">
-      <button class="secondary" id="btnRound20">20 Wörter</button>
-      <button class="secondary" id="btnRound50">50 Wörter</button>
-      <button class="secondary" id="btnRoundAll">Alle Wörter</button>
+      <button class="secondary" id="btnRound20" data-action="round20">20 Wörter</button>
+      <button class="secondary" id="btnRound50" data-action="round50">50 Wörter</button>
+      <button class="secondary" id="btnRoundAll" data-action="roundAll">Alle Wörter</button>
     </section>
 
     <section class="stats" aria-label="Lernstatistik">
@@ -134,27 +134,17 @@
     </section>
 
     <section class="card" id="quiz">
-      <div class="progress-head"><span id="questionCount">Frage 1 von 20</span><span id="percent">0 %</span></div>
-      <div class="progress"><div class="bar" id="bar"></div></div>
-      <div class="prompt-label">Wie heißt dieses Wort auf Japanisch?</div>
-      <div class="word" id="german">Hund</div>
-      <div class="hint">Du kannst Hiragana, Katakana oder Romaji eingeben.</div>
-      <form id="answerForm">
-        <div class="input-wrapper">
-          <input type="text" id="answer" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Japanische Antwort …" aria-label="Japanische Antwort" />
-        </div>
-        <div class="feedback neutral" id="feedback" role="status">Bereit für die erste Vokabel!</div>
-      </form>
+      <!-- Wird dynamisch gefüllt -->
     </section>
 
     <div class="controls">
-      <button class="secondary" id="skip">Überspringen ↷</button>
-      <button class="secondary" id="restart">Neu starten ⟳</button>
+      <button class="secondary" id="skip" data-action="skip">Überspringen ↷</button>
+      <button class="secondary" id="restart" data-action="restart">Neu starten ⟳</button>
     </div>
 
     <div class="data-controls">
-      <button class="secondary" id="exportBtn">📥 Export</button>
-      <button class="secondary" id="importBtn">📤 Import</button>
+      <button class="secondary" id="exportBtn" data-action="export">📥 Export</button>
+      <button class="secondary" id="importBtn" data-action="import">📤 Import</button>
     </div>
 
 
@@ -214,26 +204,279 @@
       $("overallProgressBar").style.width = percent + "%";
     }
 
-    $('exportBtn').addEventListener('click', () => {
-      const data = {
-        masteredWords: Array.from(masteredWords),
-        exportDate: new Date().toISOString(),
-        version: '1.0'
-      };
-      
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `japanisch-fortschritt-${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      
-      alert('✅ Fortschritt exportiert!');
-    });
+    function updateRoundButtons() {
+      $('btnRound20').style.background = roundSize === 20 ? 'var(--accent)' : '';
+      $('btnRound20').style.color = roundSize === 20 ? 'white' : '';
+      $('btnRound50').style.background = roundSize === 50 ? 'var(--accent)' : '';
+      $('btnRound50').style.color = roundSize === 50 ? 'white' : '';
+      $('btnRoundAll').style.background = roundSize === vocabulary.length ? 'var(--accent)' : '';
+      $('btnRoundAll').style.color = roundSize === vocabulary.length ? 'white' : '';
+    }
 
-    $('importBtn').addEventListener('click', () => {
-      $('importModal').classList.add('show');
+    function shuffle(items) {
+      const copy = [...items];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function normalize(text) {
+      return text.trim().toLowerCase().replace(/\s+/g, "");
+    }
+
+    function start() {
+      const shuffled = shuffle([...vocabulary]);
+      deck = shuffled.slice(0, roundSize);
+      wrongAnswers = [];
+      index = 0; 
+      score = 0; 
+      streak = 0; 
+      isRetryRound = false; 
+      isRetryMode = false;
+      isProcessingAnswer = false;
+      updateStats(); 
+      renderQuestion();
+    }
+
+    function startRetryRound() {
+      if (wrongAnswers.length === 0) {
+        start();
+        return;
+      }
+      deck = shuffle([...wrongAnswers]);
+      wrongAnswers = [];
+      index = 0;
+      isRetryRound = true;
+      isRetryMode = false;
+      isProcessingAnswer = false;
+      updateStats(); 
+      renderQuestion();
+    }
+
+    function updateStats() {
+      $("score").textContent = score;
+      $("streak").textContent = streak;
+      $("remaining").textContent = Math.max(0, deck.length - index);
+      const pct = deck.length ? Math.round(index / deck.length * 100) : 0;
+      $("bar") && ($("bar").style.width = pct + "%");
+      $("percent") && ($("percent").textContent = pct + " %");
+      $("questionCount") && ($("questionCount").textContent = index < deck.length ? `Frage ${index + 1} von ${deck.length}` : "Geschafft!");
+    }
+
+    function renderQuestion() {
+      if (index >= deck.length) {
+        showFinishedScreen();
+        return;
+      }
+      
+      const item = deck[index];
+      
+      $("quiz").innerHTML = `
+        <div class="progress-head"><span id="questionCount">Frage ${index + 1} von ${deck.length}</span><span id="percent">0 %</span></div>
+        <div class="progress"><div class="bar" id="bar"></div></div>
+        <div class="prompt-label">Wie heißt dieses Wort auf Japanisch?</div>
+        <div class="word" id="german">${item.de}</div>
+        <div class="hint">Du kannst Hiragana, Katakana oder Romaji eingeben.</div>
+        <form id="answerForm">
+          <div class="input-wrapper">
+            <input type="text" id="answer" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Japanische Antwort …" aria-label="Japanische Antwort" />
+          </div>
+          <div class="feedback ${isRetryMode ? 'retry' : 'neutral'}" id="feedback" role="status">
+            ${isRetryMode ? `<small>Versuche es nochmal! Schreibe:</small><span class="solution">${item.answers[0]}</span><small>Lesung: ${item.reading}</small>` : 'Tippe die Antwort ein...'}
+          </div>
+        </form>
+      `;
+      
+      updateStats();
+      
+      // Event Listener für das Eingabefeld
+      const answerInput = $("answer");
+      answerInput.focus();
+      
+      answerInput.addEventListener("input", handleAnswerInput);
+      answerInput.addEventListener("keydown", handleAnswerKeydown);
+      
+      const form = $("answerForm");
+      form.addEventListener("submit", (e) => e.preventDefault());
+    }
+
+    function handleAnswerInput(e) {
+      if (isProcessingAnswer) return;
+      
+      const typed = normalize(e.target.value);
+      if (!typed || index >= deck.length) return;
+      
+      const item = deck[index];
+      const correct = item.answers.some(answer => normalize(answer) === typed);
+      
+      if (correct) {
+        isProcessingAnswer = true;
+        
+        setTimeout(() => {
+          if (isRetryMode) {
+            const feedback = $("feedback");
+            feedback.className = "feedback good";
+            feedback.innerHTML = `✓ Gut! Jetzt hast du es!`;
+            isRetryMode = false;
+          } else {
+            score++;
+            streak++;
+            masteredWords.add(item.id);
+            saveProgress();
+            
+            const feedback = $("feedback");
+            feedback.className = "feedback good";
+            feedback.innerHTML = `✓ Richtig! ${item.answers[0]} · ${item.reading}`;
+            $("score").textContent = score;
+            $("streak").textContent = streak;
+          }
+          
+          setTimeout(() => {
+            index++;
+            isProcessingAnswer = false;
+            renderQuestion();
+          }, 800);
+        }, 100);
+      }
+    }
+
+    function handleAnswerKeydown(e) {
+      if (e.key === "Enter" && !isProcessingAnswer) {
+        const typed = normalize(e.target.value);
+        if (!typed || index >= deck.length) return;
+        
+        const item = deck[index];
+        const correct = item.answers.some(answer => normalize(answer) === typed);
+        
+        if (!correct && typed.length > 0) {
+          if (!isRetryMode) {
+            wrongAnswers.push(item);
+            streak = 0;
+            masteredWords.delete(item.id);
+            saveProgress();
+          }
+          
+          const input = $("answer");
+          input.classList.add("error");
+          input.value = "";
+          
+          isRetryMode = true;
+          
+          const feedback = $("feedback");
+          feedback.className = "feedback retry";
+          feedback.innerHTML = `<small>✗ Nicht ganz richtig. Versuche es nochmal! Schreibe:</small><span class="solution">${item.answers[0]}</span><small>Lesung: ${item.reading}</small>`;
+          
+          setTimeout(() => {
+            input.classList.remove("error");
+            input.focus();
+          }, 400);
+        }
+      }
+    }
+
+    function showFinishedScreen() {
+      const retryButton = wrongAnswers.length > 0 
+        ? `<button class="primary" data-action="retry">Falsche Vokabeln wiederholen (${wrongAnswers.length})</button>` 
+        : '';
+      
+      const masteryBadge = masteredWords.size === vocabulary.length 
+        ? `<div class="mastery-badge">🏆 N5-Vokabular gemeistert!</div>` 
+        : '';
+      
+      $("quiz").innerHTML = `<div class="finished">
+        <div class="emoji">🎉</div>
+        <h2>${isRetryRound ? 'Wiederholung abgeschlossen!' : 'Gut gemacht!'}</h2>
+        ${masteryBadge}
+        <p>Du hast ${score} von ${deck.length} Vokabeln richtig beantwortet.</p>
+        <p>Deine Trefferquote: ${Math.round(score / deck.length * 100)} %</p>
+        ${retryButton}
+        <button class="primary" data-action="newround" style="margin-top:10px">Neue Runde starten</button>
+      </div>`;
+      
+      updateStats();
+    }
+
+    function handleSkip() {
+      if (index >= deck.length) return;
+      
+      const item = deck[index];
+      if (!isRetryMode) {
+        wrongAnswers.push(item);
+        masteredWords.delete(item.id);
+        saveProgress();
+      }
+      
+      const feedback = $("feedback");
+      if (feedback) {
+        feedback.className = "feedback bad";
+        feedback.innerHTML = `Übersprungen. Lösung: ${item.answers[0]}<small>Lesung: ${item.reading}</small>`;
+      }
+      
+      streak = 0;
+      isRetryMode = false;
+      
+      setTimeout(() => {
+        index++;
+        renderQuestion();
+      }, 1200);
+    }
+
+    // Event Delegation für alle Buttons
+    document.body.addEventListener('click', (e) => {
+      const button = e.target.closest('button[data-action]');
+      if (!button) return;
+      
+      const action = button.dataset.action;
+      
+      switch(action) {
+        case 'round20':
+          roundSize = 20;
+          updateRoundButtons();
+          start();
+          break;
+        case 'round50':
+          roundSize = 50;
+          updateRoundButtons();
+          start();
+          break;
+        case 'roundAll':
+          roundSize = vocabulary.length;
+          updateRoundButtons();
+          start();
+          break;
+        case 'skip':
+          handleSkip();
+          break;
+        case 'restart':
+          start();
+          break;
+        case 'retry':
+          startRetryRound();
+          break;
+        case 'newround':
+          start();
+          break;
+        case 'export':
+          const data = {
+            masteredWords: Array.from(masteredWords),
+            exportDate: new Date().toISOString(),
+            version: '1.0'
+          };
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `japanisch-fortschritt-${new Date().toISOString().split('T')[0]}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          alert('✅ Fortschritt exportiert!');
+          break;
+        case 'import':
+          $('importModal').classList.add('show');
+          break;
+      }
     });
 
     $('closeImportBtn').addEventListener('click', () => {
@@ -268,244 +511,7 @@
       reader.readAsText(file);
     });
 
-    $('btnRound20').addEventListener('click', () => {
-      roundSize = 20;
-      updateRoundButtons();
-      start();
-    });
-
-    $('btnRound50').addEventListener('click', () => {
-      roundSize = 50;
-      updateRoundButtons();
-      start();
-    });
-
-    $('btnRoundAll').addEventListener('click', () => {
-      roundSize = vocabulary.length;
-      updateRoundButtons();
-      start();
-    });
-
-    function updateRoundButtons() {
-      $('btnRound20').style.background = roundSize === 20 ? 'var(--accent)' : '';
-      $('btnRound20').style.color = roundSize === 20 ? 'white' : '';
-      $('btnRound50').style.background = roundSize === 50 ? 'var(--accent)' : '';
-      $('btnRound50').style.color = roundSize === 50 ? 'white' : '';
-      $('btnRoundAll').style.background = roundSize === vocabulary.length ? 'var(--accent)' : '';
-      $('btnRoundAll').style.color = roundSize === vocabulary.length ? 'white' : '';
-    }
-
-    function shuffle(items) {
-      const copy = [...items];
-      for (let i = copy.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [copy[i], copy[j]] = [copy[j], copy[i]];
-      }
-      return copy;
-    }
-
-    function normalize(text) {
-      return text.trim().toLowerCase().replace(/\s+/g, "");
-    }
-
-    function start() {
-      const shuffled = shuffle([...vocabulary]);
-      deck = shuffled.slice(0, roundSize);
-      wrongAnswers = [];
-      index = 0; 
-      score = 0; 
-      streak = 0; 
-      isRetryRound = false; 
-      isRetryMode = false;
-      isProcessingAnswer = false;
-      updateStats(); 
-      render();
-    }
-
-    function startRetryRound() {
-      if (wrongAnswers.length === 0) {
-        start();
-        return;
-      }
-      deck = shuffle([...wrongAnswers]);
-      wrongAnswers = [];
-      index = 0;
-      isRetryRound = true;
-      isRetryMode = false;
-      isProcessingAnswer = false;
-      updateStats(); 
-      render();
-    }
-
-    function updateStats() {
-      $("score").textContent = score;
-      $("streak").textContent = streak;
-      $("remaining").textContent = Math.max(0, deck.length - index);
-      const pct = deck.length ? Math.round(index / deck.length * 100) : 0;
-      $("bar").style.width = pct + "%";
-      $("percent").textContent = pct + " %";
-      $("questionCount").textContent = index < deck.length ? `Frage ${index + 1} von ${deck.length}` : "Geschafft!";
-    }
-
-    function render() {
-      if (index >= deck.length) {
-        showFinishedScreen();
-        return;
-      }
-      
-      const item = deck[index];
-      $("german").textContent = item.de;
-      $("answer").value = "";
-      $("answer").disabled = false;
-      $("answer").classList.remove("error");
-      $("answer").focus();
-      
-      const feedback = $("feedback");
-      if (isRetryMode) {
-        feedback.className = "feedback retry";
-        feedback.innerHTML = `<small>Versuche es nochmal! Schreibe:</small><span class="solution">${item.answers[0]}</span><small>Lesung: ${item.reading}</small>`;
-      } else {
-        feedback.className = "feedback neutral";
-        feedback.innerHTML = "Tippe die Antwort ein...";
-      }
-      
-      updateStats();
-    }
-
-    function showFinishedScreen() {
-      const retryButton = wrongAnswers.length > 0 
-        ? `<button class="primary" onclick="window.startRetryRoundGlobal()">Falsche Vokabeln wiederholen (${wrongAnswers.length})</button>` 
-        : '';
-      
-      const masteryBadge = masteredWords.size === vocabulary.length 
-        ? `<div class="mastery-badge">🏆 N5-Vokabular gemeistert!</div>` 
-        : '';
-      
-      $("quiz").innerHTML = `<div class="finished">
-        <div class="emoji">🎉</div>
-        <h2>${isRetryRound ? 'Wiederholung abgeschlossen!' : 'Gut gemacht!'}</h2>
-        ${masteryBadge}
-        <p>Du hast ${score} von ${deck.length} Vokabeln richtig beantwortet.</p>
-        <p>Deine Trefferquote: ${Math.round(score / deck.length * 100)} %</p>
-        ${retryButton}
-        <button class="primary" onclick="window.startNewRoundGlobal()" style="margin-top:10px">Neue Runde starten</button>
-      </div>`;
-      
-      updateStats();
-    }
-
-    // Globale Funktionen für onclick-Handler
-    window.startRetryRoundGlobal = function() {
-      startRetryRound();
-    };
-
-    window.startNewRoundGlobal = function() {
-      start();
-    };
-
-    $("answer").addEventListener("input", (e) => {
-      if (isProcessingAnswer) return;
-      
-      const typed = normalize(e.target.value);
-      if (!typed || index >= deck.length) return;
-      
-      const item = deck[index];
-      const correct = item.answers.some(answer => normalize(answer) === typed);
-      
-      if (correct) {
-        isProcessingAnswer = true;
-        
-        setTimeout(() => {
-          if (isRetryMode) {
-            const feedback = $("feedback");
-            feedback.className = "feedback good";
-            feedback.innerHTML = `✓ Gut! Jetzt hast du es!`;
-            isRetryMode = false;
-          } else {
-            score++;
-            streak++;
-            masteredWords.add(item.id);
-            saveProgress();
-            
-            const feedback = $("feedback");
-            feedback.className = "feedback good";
-            feedback.innerHTML = `✓ Richtig! ${item.answers[0]} · ${item.reading}`;
-            $("score").textContent = score;
-            $("streak").textContent = streak;
-          }
-          
-          setTimeout(() => {
-            index++;
-            isProcessingAnswer = false;
-            render();
-          }, 800);
-        }, 100);
-      }
-    });
-
-    $("answerForm").addEventListener("submit", event => {
-      event.preventDefault();
-    });
-
-    $("answer").addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !isProcessingAnswer) {
-        const typed = normalize(e.target.value);
-        if (!typed || index >= deck.length) return;
-        
-        const item = deck[index];
-        const correct = item.answers.some(answer => normalize(answer) === typed);
-        
-        if (!correct && typed.length > 0) {
-          if (!isRetryMode) {
-            wrongAnswers.push(item);
-            streak = 0;
-            masteredWords.delete(item.id);
-            saveProgress();
-          }
-          
-          const input = $("answer");
-          input.classList.add("error");
-          input.value = "";
-          
-          isRetryMode = true;
-          
-          const feedback = $("feedback");
-          feedback.className = "feedback retry";
-          feedback.innerHTML = `<small>✗ Nicht ganz richtig. Versuche es nochmal! Schreibe:</small><span class="solution">${item.answers[0]}</span><small>Lesung: ${item.reading}</small>`;
-          
-          setTimeout(() => {
-            input.classList.remove("error");
-            input.focus();
-          }, 400);
-        }
-      }
-    });
-
-    $("skip").addEventListener("click", () => {
-      if (index >= deck.length) return;
-      
-      const item = deck[index];
-      if (!isRetryMode) {
-        wrongAnswers.push(item);
-        masteredWords.delete(item.id);
-        saveProgress();
-      }
-      
-      const feedback = $("feedback");
-      feedback.className = "feedback bad";
-      feedback.innerHTML = `Übersprungen. Lösung: ${item.answers[0]}<small>Lesung: ${item.reading}</small>`;
-      
-      streak = 0;
-      isRetryMode = false;
-      
-      setTimeout(() => {
-        index++;
-        render();
-      }, 1200);
-    });
-
-    $("restart").addEventListener("click", start);
-
+    // Initialisierung
     loadProgress();
     updateOverallProgress();
     updateRoundButtons();
