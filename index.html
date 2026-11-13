@@ -88,6 +88,8 @@
     .modal-content input { margin-bottom:12px; }
     .modal-buttons { display:flex; gap:10px; }
     .modal-buttons button { flex:1; }
+    .settings { display:flex; gap:8px; margin-bottom:14px; }
+    .settings button { flex:1; font-size:12px; padding:10px; }
     @media (max-width:420px) { header { align-items:flex-start; } .tag { margin-top:5px; } .controls button { padding:12px 8px; } }
   </style>
 </head>
@@ -114,9 +116,15 @@
         <div class="progress-bar-fill" id="overallProgressBar"></div>
       </div>
       <div class="progress-stats">
-        <span><strong id="masteredCount">0</strong> von <strong id="totalCount">100</strong> gemeistert</span>
+        <span><strong id="masteredCount">0</strong> von <strong id="totalCount">800</strong> gemeistert</span>
         <span><strong id="masteryPercent">0%</strong></span>
       </div>
+    </section>
+
+    <section class="settings">
+      <button class="secondary" id="btnRound20">20 Wörter</button>
+      <button class="secondary" id="btnRound50">50 Wörter</button>
+      <button class="secondary" id="btnRoundAll">Alle Wörter</button>
     </section>
 
     <section class="stats" aria-label="Lernstatistik">
@@ -126,7 +134,7 @@
     </section>
 
     <section class="card" id="quiz">
-      <div class="progress-head"><span id="questionCount">Frage 1 von 100</span><span id="percent">0 %</span></div>
+      <div class="progress-head"><span id="questionCount">Frage 1 von 20</span><span id="percent">0 %</span></div>
       <div class="progress"><div class="bar" id="bar"></div></div>
       <div class="prompt-label">Wie heißt dieses Wort auf Japanisch?</div>
       <div class="word" id="german">Hund</div>
@@ -147,27 +155,10 @@
     <div class="data-controls">
       <button class="secondary" id="exportBtn">📥 Export</button>
       <button class="secondary" id="importBtn">📤 Import</button>
-      <button class="secondary" id="cloudBtn">☁️ Cloud-Sync</button>
     </div>
 
-    
+    <div class="foot">小さな一歩 · Jeder kleine Schritt zählt</div>
   </main>
-
-  <!-- Cloud-Sync Modal -->
-  <div class="modal" id="cloudModal">
-    <div class="modal-content">
-      <h2>☁️ Cloud-Synchronisation</h2>
-      <p>Gib einen eindeutigen Benutzernamen ein, um deinen Fortschritt geräteübergreifend zu synchronisieren.</p>
-      <input type="text" id="usernameInput" placeholder="Dein Benutzername" maxlength="30" />
-      <div class="modal-buttons">
-        <button class="secondary" onclick="closeCloudModal()">Abbrechen</button>
-        <button class="primary" onclick="syncToCloud()">Synchronisieren</button>
-      </div>
-      <p style="font-size:11px; margin-top:16px; color:var(--muted);">
-        💡 Tipp: Verwende denselben Benutzernamen auf allen Geräten
-      </p>
-    </div>
-  </div>
 
   <!-- Import Modal -->
   <div class="modal" id="importModal">
@@ -176,171 +167,20 @@
       <p>Wähle eine zuvor exportierte Fortschrittsdatei aus.</p>
       <input type="file" id="fileInput" accept=".json" />
       <div class="modal-buttons">
-        <button class="secondary" onclick="closeImportModal()">Abbrechen</button>
-        <button class="primary" onclick="importProgress()">Importieren</button>
+        <button class="secondary" id="closeImportBtn">Abbrechen</button>
+        <button class="primary" id="importFileBtn">Importieren</button>
       </div>
     </div>
   </div>
 
-  <script type="module">
-    // Firebase Konfiguration (Optional - nur wenn du Firebase nutzen willst)
-    // Ersetze diese Werte mit deinen eigenen Firebase-Credentials
-    // Anleitung: https://firebase.google.com/docs/web/setup
-    
-    const FIREBASE_ENABLED = false; // Auf true setzen wenn Firebase konfiguriert ist
-    
-    const firebaseConfig = {
-      apiKey: "DEIN_API_KEY",
-      authDomain: "DEIN_PROJECT.firebaseapp.com",
-      databaseURL: "https://DEIN_PROJECT.firebaseio.com",
-      projectId: "DEIN_PROJECT",
-      storageBucket: "DEIN_PROJECT.appspot.com",
-      messagingSenderId: "DEINE_SENDER_ID",
-      appId: "DEINE_APP_ID"
-    };
-
-    let db = null;
-
-    if (FIREBASE_ENABLED) {
-      // Firebase initialisieren (nur wenn aktiviert)
-      try {
-        const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getDatabase, ref, set, get } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-        
-        const app = initializeApp(firebaseConfig);
-        db = getDatabase(app);
-        window.firebaseDB = { ref, set, get };
-        
-        updateSyncStatus('synced', '☁️ Cloud bereit');
-      } catch (e) {
-        console.log('Firebase nicht verfügbar, nutze lokalen Speicher');
-      }
-    }
-  </script>
-
+  <script src="n5-vocabulary.js"></script>
   <script>
-    const vocabulary = [
-      {id:"watashi", de:"Ich", answers:["わたし","私","watashi"], reading:"わたし"},
-      {id:"anata", de:"Du / Sie", answers:["あなた","anata"], reading:"あなた"},
-      {id:"kare", de:"Er / Sie / Es", answers:["かれ","彼","kare"], reading:"かれ"},
-      {id:"kanojo", de:"Sie (weiblich)", answers:["かのじょ","彼女","kanojo"], reading:"かのじょ"},
-      {id:"watashitachi", de:"Wir", answers:["わたしたち","私たち","watashitachi"], reading:"わたしたち"},
-      {id:"hito", de:"Mensch", answers:["ひと","人","hito"], reading:"ひと"},
-      {id:"kodomo", de:"Kind", answers:["こども","子供","子ども","kodomo"], reading:"こども"},
-      {id:"otoko", de:"Mann", answers:["おとこ","男","otoko"], reading:"おとこ"},
-      {id:"onna", de:"Frau", answers:["おんな","女","onna"], reading:"おんな"},
-      {id:"sensei", de:"Lehrer", answers:["せんせい","先生","sensei"], reading:"せんせい"},
-      {id:"gakusei", de:"Schüler", answers:["がくせい","学生","gakusei"], reading:"がくせい"},
-      {id:"tomodachi", de:"Freund", answers:["ともだち","友達","tomodachi"], reading:"ともだち"},
-      {id:"kazoku", de:"Familie", answers:["かぞく","家族","kazoku"], reading:"かぞく"},
-      {id:"haha", de:"Mutter", answers:["はは","母","haha"], reading:"はは"},
-      {id:"chichi", de:"Vater", answers:["ちち","父","chichi"], reading:"ちち"},
-      {id:"ani", de:"Älterer Bruder", answers:["あに","兄","ani"], reading:"あに"},
-      {id:"ane", de:"Ältere Schwester", answers:["あね","姉","ane"], reading:"あね"},
-      {id:"otouto", de:"Jüngerer Bruder", answers:["おとうと","弟","otouto"], reading:"おとうと"},
-      {id:"imouto", de:"Jüngere Schwester", answers:["いもうと","妹","imouto"], reading:"いもうと"},
-      {id:"inu", de:"Hund", answers:["いぬ","犬","inu"], reading:"いぬ"},
-      {id:"neko", de:"Katze", answers:["ねこ","猫","neko"], reading:"ねこ"},
-      {id:"tori", de:"Vogel", answers:["とり","鳥","tori"], reading:"とり"},
-      {id:"sakana", de:"Fisch", answers:["さかな","魚","sakana"], reading:"さかな"},
-      {id:"ie", de:"Haus", answers:["いえ","家","ie"], reading:"いえ"},
-      {id:"gakkou", de:"Schule", answers:["がっこう","学校","gakkou","gakko"], reading:"がっこう"},
-      {id:"kaisha", de:"Firma", answers:["かいしゃ","会社","kaisha"], reading:"かいしゃ"},
-      {id:"byouin", de:"Krankenhaus", answers:["びょういん","病院","byouin"], reading:"びょういん"},
-      {id:"eki", de:"Bahnhof", answers:["えき","駅","eki"], reading:"えき"},
-      {id:"mise", de:"Geschäft", answers:["みせ","店","mise"], reading:"みせ"},
-      {id:"resutoran", de:"Restaurant", answers:["レストラン","resutoran"], reading:"レストラン"},
-      {id:"ginkou", de:"Bank", answers:["ぎんこう","銀行","ginkou","ginko"], reading:"ぎんこう"},
-      {id:"yuubinkyoku", de:"Post", answers:["ゆうびんきょく","郵便局","yuubinkyoku"], reading:"ゆうびんきょく"},
-      {id:"hon", de:"Buch", answers:["ほん","本","hon"], reading:"ほん"},
-      {id:"shinbun", de:"Zeitung", answers:["しんぶん","新聞","shinbun"], reading:"しんぶん"},
-      {id:"pen", de:"Stift", answers:["ペン","pen"], reading:"ペン"},
-      {id:"kami", de:"Papier", answers:["かみ","紙","kami"], reading:"かみ"},
-      {id:"tsukue", de:"Tisch", answers:["つくえ","机","tsukue"], reading:"つくえ"},
-      {id:"isu", de:"Stuhl", answers:["いす","椅子","isu"], reading:"いす"},
-      {id:"doa", de:"Tür", answers:["ドア","doa"], reading:"ドア"},
-      {id:"mado", de:"Fenster", answers:["まど","窓","mado"], reading:"まど"},
-      {id:"kuruma", de:"Auto", answers:["くるま","車","kuruma"], reading:"くるま"},
-      {id:"densha", de:"Zug", answers:["でんしゃ","電車","densha"], reading:"でんしゃ"},
-      {id:"basu", de:"Bus", answers:["バス","basu"], reading:"バス"},
-      {id:"hikouki", de:"Flugzeug", answers:["ひこうき","飛行機","hikouki"], reading:"ひこうき"},
-      {id:"jitensha", de:"Fahrrad", answers:["じてんしゃ","自転車","jitensha"], reading:"じてんしゃ"},
-      {id:"mizu", de:"Wasser", answers:["みず","水","mizu"], reading:"みず"},
-      {id:"ocha", de:"Tee", answers:["おちゃ","お茶","ocha"], reading:"おちゃ"},
-      {id:"koohii", de:"Kaffee", answers:["コーヒー","koohii"], reading:"コーヒー"},
-      {id:"gyuunyuu", de:"Milch", answers:["ぎゅうにゅう","牛乳","gyuunyuu"], reading:"ぎゅうにゅう"},
-      {id:"gohan", de:"Reis (gekocht)", answers:["ごはん","ご飯","gohan"], reading:"ごはん"},
-      {id:"pan", de:"Brot", answers:["パン","pan"], reading:"パン"},
-      {id:"niku", de:"Fleisch", answers:["にく","肉","niku"], reading:"にく"},
-      {id:"yasai", de:"Gemüse", answers:["やさい","野菜","yasai"], reading:"やさい"},
-      {id:"kudamono", de:"Obst", answers:["くだもの","果物","kudamono"], reading:"くだもの"},
-      {id:"ringo", de:"Apfel", answers:["りんご","林檎","ringo"], reading:"りんご"},
-      {id:"tamago", de:"Ei", answers:["たまご","卵","tamago"], reading:"たまご"},
-      {id:"tabemono", de:"Essen", answers:["たべもの","食べ物","tabemono"], reading:"たべもの"},
-      {id:"nomimono", de:"Trinken", answers:["のみもの","飲み物","nomimono"], reading:"のみもの"},
-      {id:"asa", de:"Morgen", answers:["あさ","朝","asa"], reading:"あさ"},
-      {id:"hiru", de:"Mittag", answers:["ひる","昼","hiru"], reading:"ひる"},
-      {id:"yoru", de:"Abend", answers:["よる","夜","yoru"], reading:"よる"},
-      {id:"kyou", de:"Heute", answers:["きょう","今日","kyou","kyo"], reading:"きょう"},
-      {id:"kinou", de:"Gestern", answers:["きのう","昨日","kinou"], reading:"きのう"},
-      {id:"ashita", de:"Morgen (nächster Tag)", answers:["あした","明日","ashita"], reading:"あした"},
-      {id:"toshi", de:"Jahr", answers:["とし","年","toshi"], reading:"とし"},
-      {id:"tsuki", de:"Monat", answers:["つき","月","tsuki"], reading:"つき"},
-      {id:"hi", de:"Tag", answers:["ひ","日","hi"], reading:"ひ"},
-      {id:"shuu", de:"Woche", answers:["しゅう","週","shuu"], reading:"しゅう"},
-      {id:"jikan", de:"Zeit", answers:["じかん","時間","jikan"], reading:"じかん"},
-      {id:"yama", de:"Berg", answers:["やま","山","yama"], reading:"やま"},
-      {id:"kawa", de:"Fluss", answers:["かわ","川","kawa"], reading:"かわ"},
-      {id:"umi", de:"Meer", answers:["うみ","海","umi"], reading:"うみ"},
-      {id:"sora", de:"Himmel", answers:["そら","空","sora"], reading:"そら"},
-      {id:"hi2", de:"Sonne / Tag", answers:["ひ","日","hi"], reading:"ひ"},
-      {id:"tsuki2", de:"Mond", answers:["つき","月","tsuki"], reading:"つき"},
-      {id:"hoshi", de:"Stern", answers:["ほし","星","hoshi"], reading:"ほし"},
-      {id:"ame", de:"Regen", answers:["あめ","雨","ame"], reading:"あめ"},
-      {id:"yuki", de:"Schnee", answers:["ゆき","雪","yuki"], reading:"ゆき"},
-      {id:"kaze", de:"Wind", answers:["かぜ","風","kaze"], reading:"かぜ"},
-      {id:"ki", de:"Baum", answers:["き","木","ki"], reading:"き"},
-      {id:"hana", de:"Blume", answers:["はな","花","hana"], reading:"はな"},
-      {id:"kusa", de:"Gras", answers:["くさ","草","kusa"], reading:"くさ"},
-      {id:"ookii", de:"Groß", answers:["おおきい","大きい","ookii"], reading:"おおきい"},
-      {id:"chiisai", de:"Klein", answers:["ちいさい","小さい","chiisai"], reading:"ちいさい"},
-      {id:"atarashii", de:"Neu", answers:["あたらしい","新しい","atarashii"], reading:"あたらしい"},
-      {id:"furui", de:"Alt", answers:["ふるい","古い","furui"], reading:"ふるい"},
-      {id:"ii", de:"Gut", answers:["いい","よい","良い","ii","yoi"], reading:"いい"},
-      {id:"warui", de:"Schlecht", answers:["わるい","悪い","warui"], reading:"わるい"},
-      {id:"kirei", de:"Schön", answers:["きれい","綺麗","kirei"], reading:"きれい"},
-      {id:"atsui", de:"Heiß", answers:["あつい","暑い","熱い","atsui"], reading:"あつい"},
-      {id:"samui", de:"Kalt", answers:["さむい","寒い","samui"], reading:"さむい"},
-      {id:"ai", de:"Liebe", answers:["あい","愛","ai"], reading:"あい"},
-      {id:"hai", de:"Ja", answers:["はい","hai"], reading:"はい"},
-      {id:"iie", de:"Nein", answers:["いいえ","iie"], reading:"いいえ"},
-      {id:"arigatou", de:"Danke", answers:["ありがとう","arigatou","arigato"], reading:"ありがとう"},
-      {id:"sumimasen", de:"Entschuldigung", answers:["すみません","sumimasen"], reading:"すみません"},
-      {id:"konnichiwa", de:"Hallo (tagsüber)", answers:["こんにちは","konnichiwa"], reading:"こんにちは"},
-      {id:"ohayou", de:"Guten Morgen", answers:["おはよう","ohayou","ohayo"], reading:"おはよう"},
-      {id:"konbanwa", de:"Guten Abend", answers:["こんばんは","konbanwa"], reading:"こんばんは"},
-      {id:"sayounara", de:"Auf Wiedersehen", answers:["さようなら","さよなら","sayounara","sayonara"], reading:"さようなら"},
-      {id:"oyasumi", de:"Gute Nacht", answers:["おやすみ","oyasumi"], reading:"おやすみ"}
-    ];
-
     const $ = id => document.getElementById(id);
     let deck = [], wrongAnswers = [], index = 0, score = 0, streak = 0, isRetryRound = false;
     let isRetryMode = false;
     let masteredWords = new Set();
-    let currentUsername = localStorage.getItem('japanischUsername') || '';
-
-    function updateSyncStatus(status, text) {
-      const statusEl = $('syncStatus');
-      const iconEl = $('syncIcon');
-      const textEl = $('syncText');
-      
-      statusEl.className = 'sync-status ' + status;
-      textEl.textContent = text;
-      
-      if (status === 'synced') iconEl.textContent = '☁️';
-      else if (status === 'offline') iconEl.textContent = '💾';
-      else iconEl.textContent = '⏳';
-    }
+    let isProcessingAnswer = false;
+    let roundSize = 20; // Standard: 20 Wörter pro Runde
 
     function loadProgress() {
       const saved = localStorage.getItem('japanischProgress');
@@ -390,7 +230,7 @@
       a.click();
       URL.revokeObjectURL(url);
       
-      alert('✅ Fortschritt exportiert! Speichere die Datei sicher.');
+      alert('✅ Fortschritt exportiert!');
     });
 
     // Import-Funktion
@@ -398,12 +238,12 @@
       $('importModal').classList.add('show');
     });
 
-    window.closeImportModal = () => {
+    $('closeImportBtn').addEventListener('click', () => {
       $('importModal').classList.remove('show');
       $('fileInput').value = '';
-    };
+    });
 
-    window.importProgress = () => {
+    $('importFileBtn').addEventListener('click', () => {
       const file = $('fileInput').files[0];
       if (!file) {
         alert('⚠️ Bitte wähle eine Datei aus.');
@@ -418,7 +258,8 @@
             masteredWords = new Set(data.masteredWords);
             saveProgress();
             alert(`✅ Fortschritt importiert! ${masteredWords.size} Vokabeln gemeistert.`);
-            closeImportModal();
+            $('importModal').classList.remove('show');
+            $('fileInput').value = '';
           } else {
             alert('⚠️ Ungültige Datei.');
           }
@@ -427,67 +268,35 @@
         }
       };
       reader.readAsText(file);
-    };
-
-    // Cloud-Sync
-    $('cloudBtn').addEventListener('click', () => {
-      $('cloudModal').classList.add('show');
-      $('usernameInput').value = currentUsername;
     });
 
-    window.closeCloudModal = () => {
-      $('cloudModal').classList.remove('show');
-    };
+    // Rundengröße wählen
+    $('btnRound20').addEventListener('click', () => {
+      roundSize = 20;
+      updateRoundButtons();
+      start();
+    });
 
-    window.syncToCloud = async () => {
-      const username = $('usernameInput').value.trim();
-      if (!username) {
-        alert('⚠️ Bitte gib einen Benutzernamen ein.');
-        return;
-      }
-      
-      if (!window.firebaseDB) {
-        alert('⚠️ Cloud-Sync ist nicht konfiguriert. Nutze Export/Import als Alternative.');
-        closeCloudModal();
-        return;
-      }
-      
-      try {
-        updateSyncStatus('syncing', 'Synchronisiere...');
-        
-        const { ref, set, get } = window.firebaseDB;
-        const userRef = ref(window.db, 'users/' + username);
-        
-        // Lade Cloud-Daten
-        const snapshot = await get(userRef);
-        
-        if (snapshot.exists()) {
-          const cloudData = snapshot.val();
-          const cloudMastered = new Set(cloudData.masteredWords || []);
-          
-          // Merge: Nimm die Vereinigung beider Sets
-          masteredWords = new Set([...masteredWords, ...cloudMastered]);
-        }
-        
-        // Speichere aktualisierten Stand in Cloud
-        await set(userRef, {
-          masteredWords: Array.from(masteredWords),
-          lastSync: new Date().toISOString()
-        });
-        
-        currentUsername = username;
-        localStorage.setItem('japanischUsername', username);
-        saveProgress();
-        
-        updateSyncStatus('synced', `☁️ Sync mit ${username}`);
-        alert(`✅ Erfolgreich synchronisiert! ${masteredWords.size} Vokabeln gemeistert.`);
-        closeCloudModal();
-        
-      } catch (error) {
-        updateSyncStatus('offline', 'Sync fehlgeschlagen');
-        alert('❌ Fehler: ' + error.message);
-      }
-    };
+    $('btnRound50').addEventListener('click', () => {
+      roundSize = 50;
+      updateRoundButtons();
+      start();
+    });
+
+    $('btnRoundAll').addEventListener('click', () => {
+      roundSize = vocabulary.length;
+      updateRoundButtons();
+      start();
+    });
+
+    function updateRoundButtons() {
+      $('btnRound20').style.background = roundSize === 20 ? 'var(--accent)' : '';
+      $('btnRound20').style.color = roundSize === 20 ? 'white' : '';
+      $('btnRound50').style.background = roundSize === 50 ? 'var(--accent)' : '';
+      $('btnRound50').style.color = roundSize === 50 ? 'white' : '';
+      $('btnRoundAll').style.background = roundSize === vocabulary.length ? 'var(--accent)' : '';
+      $('btnRoundAll').style.color = roundSize === vocabulary.length ? 'white' : '';
+    }
 
     function shuffle(items) {
       const copy = [...items];
@@ -503,13 +312,20 @@
     }
 
     function start() {
-      deck = shuffle([...vocabulary]);
+      const shuffled = shuffle([...vocabulary]);
+      deck = shuffled.slice(0, roundSize);
       wrongAnswers = [];
-      index = 0; score = 0; streak = 0; isRetryRound = false; isRetryMode = false;
-      updateStats(); render();
+      index = 0; 
+      score = 0; 
+      streak = 0; 
+      isRetryRound = false; 
+      isRetryMode = false;
+      isProcessingAnswer = false;
+      updateStats(); 
+      render();
     }
 
-    window.startRetryRound = () => {
+    function startRetryRound() {
       if (wrongAnswers.length === 0) {
         start();
         return;
@@ -519,8 +335,10 @@
       index = 0;
       isRetryRound = true;
       isRetryMode = false;
-      updateStats(); render();
-    };
+      isProcessingAnswer = false;
+      updateStats(); 
+      render();
+    }
 
     function updateStats() {
       $("score").textContent = score;
@@ -535,7 +353,7 @@
     function render() {
       if (index >= deck.length) {
         const retryButton = wrongAnswers.length > 0 
-          ? `<button class="primary" onclick="startRetryRound()">Falsche Vokabeln wiederholen (${wrongAnswers.length})</button>` 
+          ? `<button class="primary" id="retryBtn">Falsche Vokabeln wiederholen (${wrongAnswers.length})</button>` 
           : '';
         
         const masteryBadge = masteredWords.size === vocabulary.length 
@@ -549,8 +367,19 @@
           <p>Du hast ${score} von ${deck.length} Vokabeln richtig beantwortet.</p>
           <p>Deine Trefferquote: ${Math.round(score / deck.length * 100)} %</p>
           ${retryButton}
-          <button class="primary" onclick="start()">Neue Runde starten</button>
+          <button class="primary" id="newRoundBtn" style="margin-top:10px">Neue Runde starten</button>
         </div>`;
+        
+        const retryBtn = $('retryBtn');
+        if (retryBtn) {
+          retryBtn.addEventListener('click', startRetryRound);
+        }
+        
+        const newRoundBtn = $('newRoundBtn');
+        if (newRoundBtn) {
+          newRoundBtn.addEventListener('click', start);
+        }
+        
         updateStats(); 
         return;
       }
@@ -575,6 +404,8 @@
     }
 
     $("answer").addEventListener("input", (e) => {
+      if (isProcessingAnswer) return;
+      
       const typed = normalize(e.target.value);
       if (!typed || index >= deck.length) return;
       
@@ -582,6 +413,8 @@
       const correct = item.answers.some(answer => normalize(answer) === typed);
       
       if (correct) {
+        isProcessingAnswer = true;
+        
         setTimeout(() => {
           if (isRetryMode) {
             const feedback = $("feedback");
@@ -603,6 +436,7 @@
           
           setTimeout(() => {
             index++;
+            isProcessingAnswer = false;
             render();
           }, 800);
         }, 100);
@@ -614,7 +448,7 @@
     });
 
     $("answer").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
+      if (e.key === "Enter" && !isProcessingAnswer) {
         const typed = normalize(e.target.value);
         if (!typed || index >= deck.length) return;
         
@@ -674,6 +508,7 @@
 
     loadProgress();
     updateOverallProgress();
+    updateRoundButtons();
     start();
   </script>
 </body>
