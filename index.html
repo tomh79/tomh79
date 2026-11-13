@@ -37,12 +37,16 @@
     .prompt-label { text-align:center; color:var(--muted); font-size:13px; }
     .word { text-align:center; font-size:clamp(36px,9vw,54px); font-weight:750; letter-spacing:-1.5px; margin:10px 0 6px; }
     .hint { text-align:center; color:var(--muted); font-size:13px; margin-bottom:25px; }
+    .input-wrapper { position: relative; }
     input { width:100%; border:1.5px solid #e8dfe0; border-radius:13px; padding:15px 16px; font-size:18px; outline:none; background:white; color:var(--ink); text-align:center; }
     input:focus { border-color:var(--accent); box-shadow:0 0 0 3px #d94f7015; }
     input:disabled { background:#faf7f6; }
-    .feedback { display:none; margin-top:12px; padding:13px; border-radius:12px; text-align:center; font-size:14px; }
-    .feedback.good { display:block; background:#eaf6ef; color:var(--green); }
-    .feedback.bad { display:block; background:#fff0f0; color:var(--red); }
+    .romaji-preview { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); background: #f3eff1; padding: 4px 10px; border-radius: 8px; font-size: 11px; color: var(--muted); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+    .romaji-preview.show { opacity: 1; }
+    .feedback { margin-top:12px; padding:13px; border-radius:12px; text-align:center; font-size:14px; min-height: 20px; }
+    .feedback.good { background:#eaf6ef; color:var(--green); }
+    .feedback.bad { background:#fff0f0; color:var(--red); }
+    .feedback.neutral { background:#f3eff1; color:var(--muted); }
     .feedback small { display:block; margin-top:4px; color:inherit; opacity:.85; }
     button { border:0; border-radius:13px; padding:14px 18px; font:inherit; font-weight:700; cursor:pointer; transition:transform .12s, background .12s; }
     button:active { transform:scale(.98); }
@@ -74,19 +78,21 @@
     <section class="stats" aria-label="Lernstatistik">
       <div class="stat"><strong id="score">0</strong><span>Richtig</span></div>
       <div class="stat"><strong id="streak">0</strong><span>Serie 🔥</span></div>
-      <div class="stat"><strong id="remaining">20</strong><span>Übrig</span></div>
+      <div class="stat"><strong id="remaining">0</strong><span>Übrig</span></div>
     </section>
 
     <section class="card" id="quiz">
-      <div class="progress-head"><span id="questionCount">Frage 1 von 20</span><span id="percent">0 %</span></div>
+      <div class="progress-head"><span id="questionCount">Frage 1 von 100</span><span id="percent">0 %</span></div>
       <div class="progress"><div class="bar" id="bar"></div></div>
       <div class="prompt-label">Wie heißt dieses Wort auf Japanisch?</div>
       <div class="word" id="german">Hund</div>
-      <div class="hint">Du kannst Hiragana, Kanji oder Romaji eingeben (wenn angegeben).</div>
+      <div class="hint">Tippe in Romaji – es wird automatisch in Hiragana/Katakana umgewandelt.</div>
       <form id="answerForm">
-        <input id="answer" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Japanische Antwort …" aria-label="Japanische Antwort" />
-        <div class="feedback" id="feedback" role="status"></div>
-        <button class="primary" id="submit" type="submit">Antwort überprüfen</button>
+        <div class="input-wrapper">
+          <div class="romaji-preview" id="romajiPreview"></div>
+          <input id="answer" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Japanische Antwort …" aria-label="Japanische Antwort" />
+        </div>
+        <div class="feedback neutral" id="feedback" role="status">Bereit für die erste Vokabel!</div>
       </form>
     </section>
 
@@ -98,42 +104,195 @@
   </main>
 
 <script>
-  // Vokabeln: deutsche Bedeutung, akzeptierte japanische Antworten und Lesung
+  // Komplettes N5-Vokabular (100 wichtigste Wörter)
   const vocabulary = [
+    {de:"Ich", answers:["わたし","私","watashi"], reading:"わたし"},
+    {de:"Du / Sie", answers:["あなた","anata"], reading:"あなた"},
+    {de:"Er / Sie / Es", answers:["かれ","彼","kare"], reading:"かれ"},
+    {de:"Sie (weiblich)", answers:["かのじょ","彼女","kanojo"], reading:"かのじょ"},
+    {de:"Wir", answers:["わたしたち","私たち","watashitachi"], reading:"わたしたち"},
+    {de:"Mensch", answers:["ひと","人","hito"], reading:"ひと"},
+    {de:"Kind", answers:["こども","子供","子ども","kodomo"], reading:"こども"},
+    {de:"Mann", answers:["おとこ","男","otoko"], reading:"おとこ"},
+    {de:"Frau", answers:["おんな","女","onna"], reading:"おんな"},
+    {de:"Lehrer", answers:["せんせい","先生","sensei"], reading:"せんせい"},
+    {de:"Schüler", answers:["がくせい","学生","gakusei"], reading:"がくせい"},
+    {de:"Freund", answers:["ともだち","友達","tomodachi"], reading:"ともだち"},
+    {de:"Familie", answers:["かぞく","家族","kazoku"], reading:"かぞく"},
+    {de:"Mutter", answers:["はは","母","haha"], reading:"はは"},
+    {de:"Vater", answers:["ちち","父","chichi"], reading:"ちち"},
+    {de:"Älterer Bruder", answers:["あに","兄","ani"], reading:"あに"},
+    {de:"Ältere Schwester", answers:["あね","姉","ane"], reading:"あね"},
+    {de:"Jüngerer Bruder", answers:["おとうと","弟","otouto"], reading:"おとうと"},
+    {de:"Jüngere Schwester", answers:["いもうと","妹","imouto"], reading:"いもうと"},
     {de:"Hund", answers:["いぬ","犬","inu"], reading:"いぬ"},
     {de:"Katze", answers:["ねこ","猫","neko"], reading:"ねこ"},
-    {de:"Wasser", answers:["みず","水","mizu"], reading:"みず"},
-    {de:"Buch", answers:["ほん","本","hon"], reading:"ほん"},
-    {de:"Mensch", answers:["ひと","人","hito"], reading:"ひと"},
+    {de:"Vogel", answers:["とり","鳥","tori"], reading:"とり"},
+    {de:"Fisch", answers:["さかな","魚","sakana"], reading:"さかな"},
     {de:"Haus", answers:["いえ","家","ie"], reading:"いえ"},
     {de:"Schule", answers:["がっこう","学校","gakkou","gakko"], reading:"がっこう"},
-    {de:"Freund", answers:["ともだち","友達","tomodachi"], reading:"ともだち"},
-    {de:"Apfel", answers:["りんご","林檎","ringo"], reading:"りんご"},
-    {de:"Berg", answers:["やま","山","yama"], reading:"やま"},
-    {de:"Sonne / Tag", answers:["ひ","日","hi"], reading:"ひ"},
-    {de:"Mond", answers:["つき","月","tsuki"], reading:"つき"},
+    {de:"Firma", answers:["かいしゃ","会社","kaisha"], reading:"かいしゃ"},
+    {de:"Krankenhaus", answers:["びょういん","病院","byouin"], reading:"びょういん"},
+    {de:"Bahnhof", answers:["えき","駅","eki"], reading:"えき"},
+    {de:"Geschäft", answers:["みせ","店","mise"], reading:"みせ"},
+    {de:"Restaurant", answers:["レストラン","resutoran"], reading:"レストラン"},
+    {de:"Bank", answers:["ぎんこう","銀行","ginkou","ginko"], reading:"ぎんこう"},
+    {de:"Post", answers:["ゆうびんきょく","郵便局","yuubinkyoku"], reading:"ゆうびんきょく"},
+    {de:"Buch", answers:["ほん","本","hon"], reading:"ほん"},
+    {de:"Zeitung", answers:["しんぶん","新聞","shinbun"], reading:"しんぶん"},
+    {de:"Stift", answers:["ペン","pen"], reading:"ペン"},
+    {de:"Papier", answers:["かみ","紙","kami"], reading:"かみ"},
+    {de:"Tisch", answers:["つくえ","机","tsukue"], reading:"つくえ"},
+    {de:"Stuhl", answers:["いす","椅子","isu"], reading:"いす"},
+    {de:"Tür", answers:["ドア","doa"], reading:"ドア"},
+    {de:"Fenster", answers:["まど","窓","mado"], reading:"まど"},
     {de:"Auto", answers:["くるま","車","kuruma"], reading:"くるま"},
+    {de:"Zug", answers:["でんしゃ","電車","densha"], reading:"でんしゃ"},
+    {de:"Bus", answers:["バス","basu"], reading:"バス"},
+    {de:"Flugzeug", answers:["ひこうき","飛行機","hikouki"], reading:"ひこうき"},
+    {de:"Fahrrad", answers:["じてんしゃ","自転車","jitensha"], reading:"じてんしゃ"},
+    {de:"Wasser", answers:["みず","水","mizu"], reading:"みず"},
+    {de:"Tee", answers:["おちゃ","お茶","ocha"], reading:"おちゃ"},
+    {de:"Kaffee", answers:["コーヒー","koohii"], reading:"コーヒー"},
+    {de:"Milch", answers:["ぎゅうにゅう","牛乳","gyuunyuu"], reading:"ぎゅうにゅう"},
+    {de:"Reis (gekocht)", answers:["ごはん","ご飯","gohan"], reading:"ごはん"},
+    {de:"Brot", answers:["パン","pan"], reading:"パン"},
+    {de:"Fleisch", answers:["にく","肉","niku"], reading:"にく"},
+    {de:"Gemüse", answers:["やさい","野菜","yasai"], reading:"やさい"},
+    {de:"Obst", answers:["くだもの","果物","kudamono"], reading:"くだもの"},
+    {de:"Apfel", answers:["りんご","林檎","ringo"], reading:"りんご"},
+    {de:"Ei", answers:["たまご","卵","tamago"], reading:"たまご"},
     {de:"Essen", answers:["たべもの","食べ物","tabemono"], reading:"たべもの"},
     {de:"Trinken", answers:["のみもの","飲み物","nomimono"], reading:"のみもの"},
     {de:"Morgen", answers:["あさ","朝","asa"], reading:"あさ"},
+    {de:"Mittag", answers:["ひる","昼","hiru"], reading:"ひる"},
     {de:"Abend", answers:["よる","夜","yoru"], reading:"よる"},
-    {de:"Danke", answers:["ありがとう","arigatou","arigato"], reading:"ありがとう"},
-    {de:"Hallo (tagsüber)", answers:["こんにちは","konnichiwa"], reading:"こんにちは"},
-    {de:"Auf Wiedersehen", answers:["さようなら","さよなら","sayounara","sayonara"], reading:"さようなら"},
-    {de:"Groß", answers:["おおきい","大きい","大きな","ookii"], reading:"おおきい"},
+    {de:"Heute", answers:["きょう","今日","kyou","kyo"], reading:"きょう"},
+    {de:"Gestern", answers:["きのう","昨日","kinou"], reading:"きのう"},
+    {de:"Morgen (nächster Tag)", answers:["あした","明日","ashita"], reading:"あした"},
+    {de:"Jahr", answers:["とし","年","toshi"], reading:"とし"},
+    {de:"Monat", answers:["つき","月","tsuki"], reading:"つき"},
+    {de:"Tag", answers:["ひ","日","hi"], reading:"ひ"},
+    {de:"Woche", answers:["しゅう","週","shuu"], reading:"しゅう"},
+    {de:"Zeit", answers:["じかん","時間","jikan"], reading:"じかん"},
+    {de:"Berg", answers:["やま","山","yama"], reading:"やま"},
+    {de:"Fluss", answers:["かわ","川","kawa"], reading:"かわ"},
+    {de:"Meer", answers:["うみ","海","umi"], reading:"うみ"},
+    {de:"Himmel", answers:["そら","空","sora"], reading:"そら"},
+    {de:"Sonne / Tag", answers:["ひ","日","hi"], reading:"ひ"},
+    {de:"Mond", answers:["つき","月","tsuki"], reading:"つき"},
+    {de:"Stern", answers:["ほし","星","hoshi"], reading:"ほし"},
+    {de:"Regen", answers:["あめ","雨","ame"], reading:"あめ"},
+    {de:"Schnee", answers:["ゆき","雪","yuki"], reading:"ゆき"},
+    {de:"Wind", answers:["かぜ","風","kaze"], reading:"かぜ"},
+    {de:"Baum", answers:["き","木","ki"], reading:"き"},
+    {de:"Blume", answers:["はな","花","hana"], reading:"はな"},
+    {de:"Gras", answers:["くさ","草","kusa"], reading:"くさ"},
+    {de:"Groß", answers:["おおきい","大きい","ookii"], reading:"おおきい"},
     {de:"Klein", answers:["ちいさい","小さい","chiisai"], reading:"ちいさい"},
+    {de:"Neu", answers:["あたらしい","新しい","atarashii"], reading:"あたらしい"},
+    {de:"Alt", answers:["ふるい","古い","furui"], reading:"ふるい"},
+    {de:"Gut", answers:["いい","よい","良い","ii","yoi"], reading:"いい"},
+    {de:"Schlecht", answers:["わるい","悪い","warui"], reading:"わるい"},
+    {de:"Schön", answers:["きれい","綺麗","kirei"], reading:"きれい"},
+    {de:"Heiß", answers:["あつい","暑い","熱い","atsui"], reading:"あつい"},
+    {de:"Kalt", answers:["さむい","寒い","samui"], reading:"さむい"},
+    {de:"Liebe", answers:["あい","愛","ai"], reading:"あい"},
     {de:"Ja", answers:["はい","hai"], reading:"はい"},
     {de:"Nein", answers:["いいえ","iie"], reading:"いいえ"},
-    {de:"Lehrer", answers:["せんせい","先生","sensei"], reading:"せんせい"},
-    {de:"Zeit", answers:["じかん","時間","jikan"], reading:"じかん"},
-    {de:"Heute", answers:["きょう","今日","kyou","kyo"], reading:"きょう"},
-    {de:"Morgen (nächster Tag)", answers:["あした","明日","ashita"], reading:"あした"},
-    {de:"Kind", answers:["こども","子供","子ども","kodomo"], reading:"こども"},
-    {de:"Liebe", answers:["あい","愛","ai"], reading:"あい"}
+    {de:"Danke", answers:["ありがとう","arigatou","arigato"], reading:"ありがとう"},
+    {de:"Entschuldigung", answers:["すみません","sumimasen"], reading:"すみません"},
+    {de:"Hallo (tagsüber)", answers:["こんにちは","konnichiwa"], reading:"こんにちは"},
+    {de:"Guten Morgen", answers:["おはよう","ohayou","ohayo"], reading:"おはよう"},
+    {de:"Guten Abend", answers:["こんばんは","konbanwa"], reading:"こんばんは"},
+    {de:"Auf Wiedersehen", answers:["さようなら","さよなら","sayounara","sayonara"], reading:"さようなら"},
+    {de:"Gute Nacht", answers:["おやすみ","oyasumi"], reading:"おやすみ"}
   ];
 
+  // Romaji zu Hiragana/Katakana Konvertierung
+  const romajiMap = {
+    // Hiragana
+    'a':'あ','i':'い','u':'う','e':'え','o':'お',
+    'ka':'か','ki':'き','ku':'く','ke':'け','ko':'こ',
+    'ga':'が','gi':'ぎ','gu':'ぐ','ge':'げ','go':'ご',
+    'sa':'さ','shi':'し','su':'す','se':'せ','so':'そ',
+    'za':'ざ','ji':'じ','zu':'ず','ze':'ぜ','zo':'ぞ',
+    'ta':'た','chi':'ち','tsu':'つ','te':'て','to':'と',
+    'da':'だ','di':'ぢ','du':'づ','de':'で','do':'ど',
+    'na':'な','ni':'に','nu':'ぬ','ne':'ね','no':'の',
+    'ha':'は','hi':'ひ','fu':'ふ','he':'へ','ho':'ほ',
+    'ba':'ば','bi':'び','bu':'ぶ','be':'べ','bo':'ぼ',
+    'pa':'ぱ','pi':'ぴ','pu':'ぷ','pe':'ぺ','po':'ぽ',
+    'ma':'ま','mi':'み','mu':'む','me':'め','mo':'も',
+    'ya':'や','yu':'ゆ','yo':'よ',
+    'ra':'ら','ri':'り','ru':'る','re':'れ','ro':'ろ',
+    'wa':'わ','wo':'を','n':'ん',
+    // Kombinationen
+    'kya':'きゃ','kyu':'きゅ','kyo':'きょ',
+    'gya':'ぎゃ','gyu':'ぎゅ','gyo':'ぎょ',
+    'sha':'しゃ','shu':'しゅ','sho':'しょ',
+    'ja':'じゃ','ju':'じゅ','jo':'じょ',
+    'cha':'ちゃ','chu':'ちゅ','cho':'ちょ',
+    'nya':'にゃ','nyu':'にゅ','nyo':'にょ',
+    'hya':'ひゃ','hyu':'ひゅ','hyo':'ひょ',
+    'bya':'びゃ','byu':'びゅ','byo':'びょ',
+    'pya':'ぴゃ','pyu':'ぴゅ','pyo':'ぴょ',
+    'mya':'みゃ','myu':'みゅ','myo':'みょ',
+    'rya':'りゃ','ryu':'りゅ','ryo':'りょ',
+    // Lange Vokale
+    'aa':'ああ','ii':'いい','uu':'うう','ee':'ええ','oo':'おう','ou':'おう',
+    // Sonderfälle
+    'nn':'ん','n ':'ん',
+    // Katakana für Fremdwörter
+    'fa':'ファ','fi':'フィ','fe':'フェ','fo':'フォ',
+    'va':'ヴァ','vi':'ヴィ','vu':'ヴ','ve':'ヴェ','vo':'ヴォ',
+    'ti':'ティ','tu':'トゥ','di':'ディ','du':'ドゥ'
+  };
+
+  function romajiToKana(romaji) {
+    let result = '';
+    let input = romaji.toLowerCase();
+    let i = 0;
+    
+    while (i < input.length) {
+      let matched = false;
+      
+      // Versuche längste Übereinstimmung zuerst (3, dann 2, dann 1 Zeichen)
+      for (let len = 3; len >= 1; len--) {
+        let substr = input.substr(i, len);
+        
+        if (romajiMap[substr]) {
+          result += romajiMap[substr];
+          i += len;
+          matched = true;
+          break;
+        }
+      }
+      
+      // Doppelkonsonanten (っ)
+      if (!matched && i < input.length - 1) {
+        let current = input[i];
+        let next = input[i + 1];
+        
+        if (current === next && 'kgsztdhbpmyrw'.includes(current)) {
+          result += 'っ';
+          i++;
+          matched = true;
+        }
+      }
+      
+      if (!matched) {
+        result += input[i];
+        i++;
+      }
+    }
+    
+    return result;
+  }
+
   const $ = id => document.getElementById(id);
-  let deck = [], index = 0, score = 0, streak = 0, answered = false;
+  let deck = [], wrongAnswers = [], index = 0, score = 0, streak = 0, isRetryRound = false;
+  let currentAnswer = '';
 
   function shuffle(items) {
     const copy = [...items];
@@ -143,14 +302,32 @@
     }
     return copy;
   }
+
   function normalize(text) {
     return text.trim().toLowerCase().replace(/\s+/g, "");
   }
+
   function start() {
-    deck = shuffle(vocabulary).slice(0, 20);
-    index = 0; score = 0; streak = 0; answered = false;
+    deck = shuffle([...vocabulary]);
+    wrongAnswers = [];
+    index = 0; score = 0; streak = 0; isRetryRound = false;
+    currentAnswer = '';
     updateStats(); render();
   }
+
+  function startRetryRound() {
+    if (wrongAnswers.length === 0) {
+      start();
+      return;
+    }
+    deck = shuffle([...wrongAnswers]);
+    wrongAnswers = [];
+    index = 0;
+    isRetryRound = true;
+    currentAnswer = '';
+    updateStats(); render();
+  }
+
   function updateStats() {
     $("score").textContent = score;
     $("streak").textContent = streak;
@@ -160,52 +337,150 @@
     $("percent").textContent = pct + " %";
     $("questionCount").textContent = index < deck.length ? `Frage ${index + 1} von ${deck.length}` : "Geschafft!";
   }
+
   function render() {
     if (index >= deck.length) {
-      $("quiz").innerHTML = `<div class="finished"><div class="emoji">🎉</div><h2>Gut gemacht!</h2><p>Du hast ${score} von ${deck.length} Vokabeln richtig beantwortet.</p><p>Deine Trefferquote: ${Math.round(score / deck.length * 100)} %</p><button class="primary" onclick="start()">Noch eine Runde</button></div>`;
-      updateStats(); return;
+      const retryButton = wrongAnswers.length > 0 
+        ? `<button class="primary" onclick="startRetryRound()">Falsche Vokabeln wiederholen (${wrongAnswers.length})</button>` 
+        : '';
+      
+      $("quiz").innerHTML = `<div class="finished">
+        <div class="emoji">🎉</div>
+        <h2>${isRetryRound ? 'Wiederholung abgeschlossen!' : 'Gut gemacht!'}</h2>
+        <p>Du hast ${score} von ${deck.length} Vokabeln richtig beantwortet.</p>
+        <p>Deine Trefferquote: ${Math.round(score / deck.length * 100)} %</p>
+        ${retryButton}
+        <button class="primary" onclick="start()" style="margin-top:10px">Neue Runde starten</button>
+      </div>`;
+      updateStats(); 
+      return;
     }
+    
     const item = deck[index];
     $("german").textContent = item.de;
     $("answer").value = "";
     $("answer").disabled = false;
     $("answer").focus();
-    $("feedback").className = "feedback";
-    $("feedback").textContent = "";
-    $("submit").textContent = "Antwort überprüfen";
-    answered = false;
+    
+    const feedback = $("feedback");
+    feedback.className = "feedback neutral";
+    feedback.innerHTML = currentAnswer ? currentAnswer : "Tippe die Antwort ein...";
+    
+    currentAnswer = '';
     updateStats();
   }
-  $("answerForm").addEventListener("submit", event => {
-    event.preventDefault();
-    if (index >= deck.length) return;
-    if (answered) { index++; render(); return; }
-    const typed = normalize($("answer").value);
-    if (!typed) return;
+
+  // Live Romaji zu Kana Konvertierung
+  $("answer").addEventListener("input", (e) => {
+    const input = e.target;
+    const cursorPos = input.selectionStart;
+    const beforeCursor = input.value.substring(0, cursorPos);
+    const afterCursor = input.value.substring(cursorPos);
+    
+    // Zeige Romaji-Vorschau
+    const preview = $("romajiPreview");
+    if (input.value.length > 0) {
+      preview.textContent = `Romaji: ${input.value}`;
+      preview.classList.add("show");
+    } else {
+      preview.classList.remove("show");
+    }
+    
+    // Konvertiere zu Kana
+    const convertedBefore = romajiToKana(beforeCursor);
+    const convertedAfter = romajiToKana(afterCursor);
+    const newValue = convertedBefore + convertedAfter;
+    
+    if (newValue !== input.value) {
+      input.value = newValue;
+      input.setSelectionRange(convertedBefore.length, convertedBefore.length);
+    }
+  });
+
+  // Auto-Submit bei korrekter Eingabe
+  $("answer").addEventListener("input", (e) => {
+    const typed = normalize(e.target.value);
+    if (!typed || index >= deck.length) return;
+    
     const item = deck[index];
     const correct = item.answers.some(answer => normalize(answer) === typed);
-    const feedback = $("feedback");
+    
     if (correct) {
-      score++; streak++;
-      feedback.className = "feedback good";
-      feedback.innerHTML = `Richtig! 🎉<small>${item.answers[0]} · Lesung: ${item.reading}</small>`;
-    } else {
-      streak = 0;
-      feedback.className = "feedback bad";
-      feedback.innerHTML = `Noch nicht ganz. Lösung: ${item.answers[0]}<small>Lesung: ${item.reading}</small>`;
+      // Kurze Verzögerung für visuelles Feedback
+      setTimeout(() => {
+        score++;
+        streak++;
+        
+        const feedback = $("feedback");
+        feedback.className = "feedback good";
+        feedback.innerHTML = `✓ Richtig! ${item.answers[0]} · ${item.reading}`;
+        
+        currentAnswer = feedback.innerHTML;
+        
+        $("score").textContent = score;
+        $("streak").textContent = streak;
+        
+        // Automatisch zur nächsten Frage
+        setTimeout(() => {
+          index++;
+          render();
+        }, 800);
+      }, 100);
     }
-    $("score").textContent = score;
-    $("streak").textContent = streak;
-    $("answer").disabled = true;
-    $("submit").textContent = "Weiter zur nächsten Vokabel →";
-    answered = true;
   });
+
+  $("answerForm").addEventListener("submit", event => {
+    event.preventDefault();
+  });
+
   $("skip").addEventListener("click", () => {
     if (index >= deck.length) return;
-    if (!answered) streak = 0;
-    index++; render();
+    
+    const item = deck[index];
+    wrongAnswers.push(item);
+    
+    const feedback = $("feedback");
+    feedback.className = "feedback bad";
+    feedback.innerHTML = `Übersprungen. Lösung: ${item.answers[0]}<small>Lesung: ${item.reading}</small>`;
+    
+    currentAnswer = feedback.innerHTML;
+    streak = 0;
+    
+    setTimeout(() => {
+      index++;
+      render();
+    }, 1200);
   });
+
   $("restart").addEventListener("click", start);
+
+  // Bei falscher Eingabe nach Enter
+  $("answer").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const typed = normalize(e.target.value);
+      if (!typed || index >= deck.length) return;
+      
+      const item = deck[index];
+      const correct = item.answers.some(answer => normalize(answer) === typed);
+      
+      if (!correct && typed.length > 0) {
+        wrongAnswers.push(item);
+        streak = 0;
+        
+        const feedback = $("feedback");
+        feedback.className = "feedback bad";
+        feedback.innerHTML = `✗ Falsch. Lösung: ${item.answers[0]}<small>Lesung: ${item.reading}</small>`;
+        
+        currentAnswer = feedback.innerHTML;
+        
+        setTimeout(() => {
+          index++;
+          render();
+        }, 1200);
+      }
+    }
+  });
+
   start();
 </script>
 </body>
