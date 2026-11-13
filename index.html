@@ -108,7 +108,8 @@
       <button class="secondary" id="skip">Überspringen ↷</button>
       <button class="secondary" id="restart">Neu starten ⟳</button>
     </div>
-     </main>
+
+  </main>
 
 <script>
   // Komplettes N5-Vokabular (100 wichtigste Wörter)
@@ -216,15 +217,33 @@
     {de:"Gute Nacht", answers:["おやすみ","oyasumi"], reading:"おやすみ"}
   ];
 
-  // Romaji zu Hiragana/Katakana Konvertierung
+  // Verbesserte Romaji zu Hiragana/Katakana Konvertierung
   const romajiMap = {
-    // Hiragana
-    'a':'あ','i':'い','u':'う','e':'え','o':'お',
+    // Spezielle Kombinationen ZUERST (längste zuerst)
+    'kya':'きゃ','kyu':'きゅ','kyo':'きょ',
+    'gya':'ぎゃ','gyu':'ぎゅ','gyo':'ぎょ',
+    'sha':'しゃ','shu':'しゅ','sho':'しょ','shi':'し',
+    'cha':'ちゃ','chu':'ちゅ','cho':'ちょ','chi':'ち',
+    'nya':'にゃ','nyu':'にゅ','nyo':'にょ',
+    'hya':'ひゃ','hyu':'ひゅ','hyo':'ひょ',
+    'bya':'びゃ','byu':'びゅ','byo':'びょ',
+    'pya':'ぴゃ','pyu':'ぴゅ','pyo':'ぴょ',
+    'mya':'みゃ','myu':'みゅ','myo':'みょ',
+    'rya':'りゃ','ryu':'りゅ','ryo':'りょ',
+    'ja':'じゃ','ju':'じゅ','jo':'じょ',
+    'tsu':'つ',
+    // Katakana Sonderfälle
+    'fa':'ファ','fi':'フィ','fe':'フェ','fo':'フォ',
+    'va':'ヴァ','vi':'ヴィ','vu':'ヴ','ve':'ヴェ','vo':'ヴォ',
+    'ti':'ティ','tu':'トゥ','di':'ディ','du':'ドゥ',
+    // Lange Vokale
+    'ou':'おう','oo':'おう','uu':'うう','ei':'えい','aa':'ああ','ii':'いい','ee':'ええ',
+    // Standard Hiragana (2 Zeichen)
     'ka':'か','ki':'き','ku':'く','ke':'け','ko':'こ',
     'ga':'が','gi':'ぎ','gu':'ぐ','ge':'げ','go':'ご',
-    'sa':'さ','shi':'し','su':'す','se':'せ','so':'そ',
-    'za':'ざ','ji':'じ','zu':'ず','ze':'ぜ','zo':'ぞ',
-    'ta':'た','chi':'ち','tsu':'つ','te':'て','to':'と',
+    'sa':'さ','si':'し','su':'す','se':'せ','so':'そ',
+    'za':'ざ','zi':'じ','zu':'ず','ze':'ぜ','zo':'ぞ',
+    'ta':'た','ti':'ち','tu':'つ','te':'て','to':'と',
     'da':'だ','di':'ぢ','du':'づ','de':'で','do':'ど',
     'na':'な','ni':'に','nu':'ぬ','ne':'ね','no':'の',
     'ha':'は','hi':'ひ','fu':'ふ','he':'へ','ho':'ほ',
@@ -233,27 +252,10 @@
     'ma':'ま','mi':'み','mu':'む','me':'め','mo':'も',
     'ya':'や','yu':'ゆ','yo':'よ',
     'ra':'ら','ri':'り','ru':'る','re':'れ','ro':'ろ',
-    'wa':'わ','wo':'を','n':'ん',
-    // Kombinationen
-    'kya':'きゃ','kyu':'きゅ','kyo':'きょ',
-    'gya':'ぎゃ','gyu':'ぎゅ','gyo':'ぎょ',
-    'sha':'しゃ','shu':'しゅ','sho':'しょ',
-    'ja':'じゃ','ju':'じゅ','jo':'じょ',
-    'cha':'ちゃ','chu':'ちゅ','cho':'ちょ',
-    'nya':'にゃ','nyu':'にゅ','nyo':'にょ',
-    'hya':'ひゃ','hyu':'ひゅ','hyo':'ひょ',
-    'bya':'びゃ','byu':'びゅ','byo':'びょ',
-    'pya':'ぴゃ','pyu':'ぴゅ','pyo':'ぴょ',
-    'mya':'みゃ','myu':'みゅ','myo':'みょ',
-    'rya':'りゃ','ryu':'りゅ','ryo':'りょ',
-    // Lange Vokale
-    'aa':'ああ','ii':'いい','uu':'うう','ee':'ええ','oo':'おう','ou':'おう',
-    // Sonderfälle
-    'nn':'ん','n ':'ん',
-    // Katakana für Fremdwörter
-    'fa':'ファ','fi':'フィ','fe':'フェ','fo':'フォ',
-    'va':'ヴァ','vi':'ヴィ','vu':'ヴ','ve':'ヴェ','vo':'ヴォ',
-    'ti':'ティ','tu':'トゥ','di':'ディ','du':'ドゥ'
+    'wa':'わ','wi':'ゐ','we':'ゑ','wo':'を',
+    // Einzelne Vokale (1 Zeichen) - ZULETZT
+    'a':'あ','i':'い','u':'う','e':'え','o':'お',
+    'n':'ん'
   };
 
   function romajiToKana(romaji) {
@@ -264,9 +266,18 @@
     while (i < input.length) {
       let matched = false;
       
-      // Versuche längste Übereinstimmung zuerst (3, dann 2, dann 1 Zeichen)
-      for (let len = 3; len >= 1; len--) {
+      // Versuche längste Übereinstimmung zuerst (4, 3, 2, dann 1 Zeichen)
+      for (let len = 4; len >= 1; len--) {
         let substr = input.substr(i, len);
+        
+        // Spezialfall: 'n' nur konvertieren wenn danach kein Vokal oder y kommt
+        if (substr === 'n' && len === 1) {
+          let nextChar = input[i + 1];
+          if (nextChar && 'aiueoy'.includes(nextChar)) {
+            // Nicht konvertieren, warte auf mehr Input
+            break;
+          }
+        }
         
         if (romajiMap[substr]) {
           result += romajiMap[substr];
@@ -299,7 +310,7 @@
 
   const $ = id => document.getElementById(id);
   let deck = [], wrongAnswers = [], index = 0, score = 0, streak = 0, isRetryRound = false;
-  let isRetryMode = false; // Neuer Zustand für Wiederholungsmodus
+  let isRetryMode = false;
 
   function shuffle(items) {
     const copy = [...items];
@@ -417,16 +428,13 @@
     const correct = item.answers.some(answer => normalize(answer) === typed);
     
     if (correct) {
-      // Kurze Verzögerung für visuelles Feedback
       setTimeout(() => {
         if (isRetryMode) {
-          // Im Wiederholungsmodus: Kein Punkt, aber weitermachen
           const feedback = $("feedback");
           feedback.className = "feedback good";
           feedback.innerHTML = `✓ Gut! Jetzt hast du es!`;
           isRetryMode = false;
         } else {
-          // Normaler Modus: Punkt vergeben
           score++;
           streak++;
           const feedback = $("feedback");
@@ -436,7 +444,6 @@
           $("streak").textContent = streak;
         }
         
-        // Automatisch zur nächsten Frage
         setTimeout(() => {
           index++;
           render();
@@ -449,7 +456,6 @@
     event.preventDefault();
   });
 
-  // Bei falscher Eingabe nach Enter
   $("answer").addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       const typed = normalize(e.target.value);
@@ -459,7 +465,6 @@
       const correct = item.answers.some(answer => normalize(answer) === typed);
       
       if (!correct && typed.length > 0) {
-        // Falsche Antwort: Wiederholungsmodus aktivieren
         if (!isRetryMode) {
           wrongAnswers.push(item);
           streak = 0;
@@ -475,7 +480,6 @@
         feedback.className = "feedback retry";
         feedback.innerHTML = `<small>✗ Nicht ganz richtig. Versuche es nochmal! Schreibe:</small><span class="solution">${item.answers[0]}</span><small>Lesung: ${item.reading}</small>`;
         
-        // Fokus zurück auf Input
         setTimeout(() => {
           input.classList.remove("error");
           input.focus();
