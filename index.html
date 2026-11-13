@@ -41,13 +41,21 @@
     input { width:100%; border:1.5px solid #e8dfe0; border-radius:13px; padding:15px 16px; font-size:18px; outline:none; background:white; color:var(--ink); text-align:center; }
     input:focus { border-color:var(--accent); box-shadow:0 0 0 3px #d94f7015; }
     input:disabled { background:#faf7f6; }
+    input.error { border-color:var(--red); animation: shake 0.4s; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      75% { transform: translateX(8px); }
+    }
     .romaji-preview { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); background: #f3eff1; padding: 4px 10px; border-radius: 8px; font-size: 11px; color: var(--muted); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
     .romaji-preview.show { opacity: 1; }
     .feedback { margin-top:12px; padding:13px; border-radius:12px; text-align:center; font-size:14px; min-height: 20px; }
     .feedback.good { background:#eaf6ef; color:var(--green); }
     .feedback.bad { background:#fff0f0; color:var(--red); }
     .feedback.neutral { background:#f3eff1; color:var(--muted); }
+    .feedback.retry { background:#fff8e1; color:#f57c00; border: 2px solid #ffb74d; }
     .feedback small { display:block; margin-top:4px; color:inherit; opacity:.85; }
+    .feedback .solution { display:block; font-size:20px; font-weight:700; margin:8px 0; letter-spacing:1px; }
     button { border:0; border-radius:13px; padding:14px 18px; font:inherit; font-weight:700; cursor:pointer; transition:transform .12s, background .12s; }
     button:active { transform:scale(.98); }
     .primary { width:100%; margin-top:14px; background:var(--accent); color:white; }
@@ -100,8 +108,7 @@
       <button class="secondary" id="skip">Überspringen ↷</button>
       <button class="secondary" id="restart">Neu starten ⟳</button>
     </div>
-    <div class="foot">小さな一歩 · Jeder kleine Schritt zählt</div>
-  </main>
+     </main>
 
 <script>
   // Komplettes N5-Vokabular (100 wichtigste Wörter)
@@ -292,7 +299,7 @@
 
   const $ = id => document.getElementById(id);
   let deck = [], wrongAnswers = [], index = 0, score = 0, streak = 0, isRetryRound = false;
-  let currentAnswer = '';
+  let isRetryMode = false; // Neuer Zustand für Wiederholungsmodus
 
   function shuffle(items) {
     const copy = [...items];
@@ -310,8 +317,7 @@
   function start() {
     deck = shuffle([...vocabulary]);
     wrongAnswers = [];
-    index = 0; score = 0; streak = 0; isRetryRound = false;
-    currentAnswer = '';
+    index = 0; score = 0; streak = 0; isRetryRound = false; isRetryMode = false;
     updateStats(); render();
   }
 
@@ -324,7 +330,7 @@
     wrongAnswers = [];
     index = 0;
     isRetryRound = true;
-    currentAnswer = '';
+    isRetryMode = false;
     updateStats(); render();
   }
 
@@ -360,13 +366,18 @@
     $("german").textContent = item.de;
     $("answer").value = "";
     $("answer").disabled = false;
+    $("answer").classList.remove("error");
     $("answer").focus();
     
     const feedback = $("feedback");
-    feedback.className = "feedback neutral";
-    feedback.innerHTML = currentAnswer ? currentAnswer : "Tippe die Antwort ein...";
+    if (isRetryMode) {
+      feedback.className = "feedback retry";
+      feedback.innerHTML = `<small>Versuche es nochmal! Schreibe:</small><span class="solution">${item.answers[0]}</span><small>Lesung: ${item.reading}</small>`;
+    } else {
+      feedback.className = "feedback neutral";
+      feedback.innerHTML = "Tippe die Antwort ein...";
+    }
     
-    currentAnswer = '';
     updateStats();
   }
 
@@ -408,17 +419,22 @@
     if (correct) {
       // Kurze Verzögerung für visuelles Feedback
       setTimeout(() => {
-        score++;
-        streak++;
-        
-        const feedback = $("feedback");
-        feedback.className = "feedback good";
-        feedback.innerHTML = `✓ Richtig! ${item.answers[0]} · ${item.reading}`;
-        
-        currentAnswer = feedback.innerHTML;
-        
-        $("score").textContent = score;
-        $("streak").textContent = streak;
+        if (isRetryMode) {
+          // Im Wiederholungsmodus: Kein Punkt, aber weitermachen
+          const feedback = $("feedback");
+          feedback.className = "feedback good";
+          feedback.innerHTML = `✓ Gut! Jetzt hast du es!`;
+          isRetryMode = false;
+        } else {
+          // Normaler Modus: Punkt vergeben
+          score++;
+          streak++;
+          const feedback = $("feedback");
+          feedback.className = "feedback good";
+          feedback.innerHTML = `✓ Richtig! ${item.answers[0]} · ${item.reading}`;
+          $("score").textContent = score;
+          $("streak").textContent = streak;
+        }
         
         // Automatisch zur nächsten Frage
         setTimeout(() => {
@@ -433,27 +449,6 @@
     event.preventDefault();
   });
 
-  $("skip").addEventListener("click", () => {
-    if (index >= deck.length) return;
-    
-    const item = deck[index];
-    wrongAnswers.push(item);
-    
-    const feedback = $("feedback");
-    feedback.className = "feedback bad";
-    feedback.innerHTML = `Übersprungen. Lösung: ${item.answers[0]}<small>Lesung: ${item.reading}</small>`;
-    
-    currentAnswer = feedback.innerHTML;
-    streak = 0;
-    
-    setTimeout(() => {
-      index++;
-      render();
-    }, 1200);
-  });
-
-  $("restart").addEventListener("click", start);
-
   // Bei falscher Eingabe nach Enter
   $("answer").addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -464,22 +459,53 @@
       const correct = item.answers.some(answer => normalize(answer) === typed);
       
       if (!correct && typed.length > 0) {
-        wrongAnswers.push(item);
-        streak = 0;
+        // Falsche Antwort: Wiederholungsmodus aktivieren
+        if (!isRetryMode) {
+          wrongAnswers.push(item);
+          streak = 0;
+        }
+        
+        const input = $("answer");
+        input.classList.add("error");
+        input.value = "";
+        
+        isRetryMode = true;
         
         const feedback = $("feedback");
-        feedback.className = "feedback bad";
-        feedback.innerHTML = `✗ Falsch. Lösung: ${item.answers[0]}<small>Lesung: ${item.reading}</small>`;
+        feedback.className = "feedback retry";
+        feedback.innerHTML = `<small>✗ Nicht ganz richtig. Versuche es nochmal! Schreibe:</small><span class="solution">${item.answers[0]}</span><small>Lesung: ${item.reading}</small>`;
         
-        currentAnswer = feedback.innerHTML;
-        
+        // Fokus zurück auf Input
         setTimeout(() => {
-          index++;
-          render();
-        }, 1200);
+          input.classList.remove("error");
+          input.focus();
+        }, 400);
       }
     }
   });
+
+  $("skip").addEventListener("click", () => {
+    if (index >= deck.length) return;
+    
+    const item = deck[index];
+    if (!isRetryMode) {
+      wrongAnswers.push(item);
+    }
+    
+    const feedback = $("feedback");
+    feedback.className = "feedback bad";
+    feedback.innerHTML = `Übersprungen. Lösung: ${item.answers[0]}<small>Lesung: ${item.reading}</small>`;
+    
+    streak = 0;
+    isRetryMode = false;
+    
+    setTimeout(() => {
+      index++;
+      render();
+    }, 1200);
+  });
+
+  $("restart").addEventListener("click", start);
 
   start();
 </script>
