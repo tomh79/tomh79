@@ -100,7 +100,7 @@
         <div class="logo">あ</div>
         <div>
           <h1>Japanisch Vokabeltrainer</h1>
-          <div class="subtitle">Lerne Schritt für Schritt 日本語</div>
+          
           <div class="sync-status" id="syncStatus">
             <span id="syncIcon">💾</span>
             <span id="syncText">Lokal gespeichert</span>
@@ -157,7 +157,7 @@
       <button class="secondary" id="importBtn">📤 Import</button>
     </div>
 
-    <div class="foot">小さな一歩 · Jeder kleine Schritt zählt</div>
+
   </main>
 
   <!-- Import Modal -->
@@ -180,7 +180,7 @@
     let isRetryMode = false;
     let masteredWords = new Set();
     let isProcessingAnswer = false;
-    let roundSize = 20; // Standard: 20 Wörter pro Runde
+    let roundSize = 20;
 
     function loadProgress() {
       const saved = localStorage.getItem('japanischProgress');
@@ -214,7 +214,6 @@
       $("overallProgressBar").style.width = percent + "%";
     }
 
-    // Export-Funktion
     $('exportBtn').addEventListener('click', () => {
       const data = {
         masteredWords: Array.from(masteredWords),
@@ -233,7 +232,6 @@
       alert('✅ Fortschritt exportiert!');
     });
 
-    // Import-Funktion
     $('importBtn').addEventListener('click', () => {
       $('importModal').classList.add('show');
     });
@@ -270,7 +268,6 @@
       reader.readAsText(file);
     });
 
-    // Rundengröße wählen
     $('btnRound20').addEventListener('click', () => {
       roundSize = 20;
       updateRoundButtons();
@@ -352,35 +349,7 @@
 
     function render() {
       if (index >= deck.length) {
-        const retryButton = wrongAnswers.length > 0 
-          ? `<button class="primary" id="retryBtn">Falsche Vokabeln wiederholen (${wrongAnswers.length})</button>` 
-          : '';
-        
-        const masteryBadge = masteredWords.size === vocabulary.length 
-          ? `<div class="mastery-badge">🏆 N5-Vokabular gemeistert!</div>` 
-          : '';
-        
-        $("quiz").innerHTML = `<div class="finished">
-          <div class="emoji">🎉</div>
-          <h2>${isRetryRound ? 'Wiederholung abgeschlossen!' : 'Gut gemacht!'}</h2>
-          ${masteryBadge}
-          <p>Du hast ${score} von ${deck.length} Vokabeln richtig beantwortet.</p>
-          <p>Deine Trefferquote: ${Math.round(score / deck.length * 100)} %</p>
-          ${retryButton}
-          <button class="primary" id="newRoundBtn" style="margin-top:10px">Neue Runde starten</button>
-        </div>`;
-        
-        const retryBtn = $('retryBtn');
-        if (retryBtn) {
-          retryBtn.addEventListener('click', startRetryRound);
-        }
-        
-        const newRoundBtn = $('newRoundBtn');
-        if (newRoundBtn) {
-          newRoundBtn.addEventListener('click', start);
-        }
-        
-        updateStats(); 
+        showFinishedScreen();
         return;
       }
       
@@ -402,6 +371,37 @@
       
       updateStats();
     }
+
+    function showFinishedScreen() {
+      const retryButton = wrongAnswers.length > 0 
+        ? `<button class="primary" onclick="window.startRetryRoundGlobal()">Falsche Vokabeln wiederholen (${wrongAnswers.length})</button>` 
+        : '';
+      
+      const masteryBadge = masteredWords.size === vocabulary.length 
+        ? `<div class="mastery-badge">🏆 N5-Vokabular gemeistert!</div>` 
+        : '';
+      
+      $("quiz").innerHTML = `<div class="finished">
+        <div class="emoji">🎉</div>
+        <h2>${isRetryRound ? 'Wiederholung abgeschlossen!' : 'Gut gemacht!'}</h2>
+        ${masteryBadge}
+        <p>Du hast ${score} von ${deck.length} Vokabeln richtig beantwortet.</p>
+        <p>Deine Trefferquote: ${Math.round(score / deck.length * 100)} %</p>
+        ${retryButton}
+        <button class="primary" onclick="window.startNewRoundGlobal()" style="margin-top:10px">Neue Runde starten</button>
+      </div>`;
+      
+      updateStats();
+    }
+
+    // Globale Funktionen für onclick-Handler
+    window.startRetryRoundGlobal = function() {
+      startRetryRound();
+    };
+
+    window.startNewRoundGlobal = function() {
+      start();
+    };
 
     $("answer").addEventListener("input", (e) => {
       if (isProcessingAnswer) return;
